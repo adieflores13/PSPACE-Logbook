@@ -1,337 +1,312 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
-} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React from "react";
+import {
+  Dimensions,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import Colors from "@/constants/colors";
+import { useAircraft } from "@/context/aircraft-context";
+import { Fonts } from "@/constants/theme";
 
-export default function AddAircraftScreen() {
-  const router = useRouter();
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.34);
+const WHITE_SECTION_MIN_HEIGHT = Math.round(SCREEN_HEIGHT * 0.7);
+const COUNTRY1 = require("../../assets/images/country1.png");
+const COUNTRY2 = require("../../assets/images/country2.png");
+const COUNTRY3 = require("../../assets/images/country3.png");
 
-  const [registration, setRegistration] = useState("");
-  const [make, setMake] = useState("");
-  const [model, setModel] = useState("");
-  const [variant, setVariant] = useState("");
-  const [numberOfEngines, setNumberOfEngines] = useState<"single" | "multi">("multi");
-  const [engineType, setEngineType] = useState<"Pistol" | "Turboprop" | "Turbofan" | "Other">("Turboprop");
-  const [mtow, setMtow] = useState("");
-
-  const engineOptions: Array<"Pistol" | "Turboprop" | "Turbofan" | "Other"> = [
-    "Pistol",
-    "Turboprop",
-    "Turbofan",
-    "Other",
-  ];
-
-  const handleAddAircraft = () => {
-    console.log({ registration, make, model, variant, numberOfEngines, engineType, mtow });
-  };
-
-  const handleCancel = () => {
-    router.back();
-  };
-
+function DashedRule() {
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.cardBackground} />
+    <View style={styles.rule}>
+      {Array.from({ length: 26 }).map((_, index) => (
+        <View key={index} style={styles.ruleDash} />
+      ))}
+    </View>
+  );
+}
 
-      {/* HEADER SECTION */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Add Aircraft</Text>
+function WorldMapBackdrop() {
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY1} style={[styles.countryBase, styles.countryAmericas]} />
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY2} style={[styles.countryBase, styles.countryEuraf]} />
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY3} style={[styles.countryBase, styles.countryAustralia]} />
+    </View>
+  );
+}
+
+function AircraftCard({
+  aircraft,
+}: {
+  aircraft: { registration: string; makeModelVariant: string; hours: number };
+}) {
+  return (
+    <View style={styles.card}>
+      <DashedRule />
+
+      <View style={styles.cardContent}>
+        <View style={styles.registrationColumn}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.92} numberOfLines={1} style={styles.cardLabel}>
+            Registration:
+          </Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.86} numberOfLines={1} style={styles.cardValue}>
+            {aircraft.registration}
+          </Text>
+        </View>
+
+        <View style={styles.modelColumn}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.cardLabel}>
+            Make/Mode/Variant
+          </Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.86} numberOfLines={1} style={styles.cardValue}>
+            {aircraft.makeModelVariant}
+          </Text>
+        </View>
+
+        <View style={styles.hoursColumn}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.9} numberOfLines={1} style={styles.cardLabel}>
+            Hours
+          </Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.86} numberOfLines={1} style={styles.cardValue}>
+            {aircraft.hours}
+          </Text>
+        </View>
       </View>
 
-      {/* BODY SECTION */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Basic Info Card */}
-        <View style={styles.card}>
-          <View style={styles.inputRow}>
-            <Text style={styles.label}>Registration:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Registration..."
-              placeholderTextColor={Colors.textPlaceholder}
-              value={registration}
-              onChangeText={setRegistration}
-            />
-          </View>
-          <View style={styles.divider} />
+      <DashedRule />
+    </View>
+  );
+}
 
-          <View style={styles.inputRow}>
-            <Text style={styles.label}>Make:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Make..."
-              placeholderTextColor={Colors.textPlaceholder}
-              value={make}
-              onChangeText={setMake}
-            />
-          </View>
-          <View style={styles.divider} />
+export default function AircraftListScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { aircraft } = useAircraft();
 
-          <View style={styles.inputRow}>
-            <Text style={styles.label}>Model:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Make..."
-              placeholderTextColor={Colors.textPlaceholder}
-              value={model}
-              onChangeText={setModel}
-            />
-          </View>
-          <View style={styles.divider} />
+  return (
+    <View style={styles.screen}>
+      <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
 
-          <View style={styles.inputRow}>
-            <Text style={styles.label}>Variant:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Variant..."
-              placeholderTextColor={Colors.textPlaceholder}
-              value={variant}
-              onChangeText={setVariant}
-            />
-          </View>
-        </View>
+      <ScrollView bounces={false} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 }]}>
+          <WorldMapBackdrop />
 
-        {/* Engine Info Card */}
-        <View style={styles.card}>
-          {/* Number of Engines */}
-          <View style={styles.engineRow}>
-            <Text style={styles.label}>Number of Engines:</Text>
-            <View style={styles.toggleGroup}>
-              <TouchableOpacity
-                style={[styles.toggleButton, numberOfEngines === "single" && styles.toggleButtonActive]}
-                onPress={() => setNumberOfEngines("single")}
-              >
-                <Text style={[styles.toggleText, numberOfEngines === "single" && styles.toggleTextActive]}>
-                  Single Engine
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleButton, numberOfEngines === "multi" && styles.toggleButtonActive]}
-                onPress={() => setNumberOfEngines("multi")}
-              >
-                <Text style={[styles.toggleText, numberOfEngines === "multi" && styles.toggleTextActive]}>
-                  Multi Engine
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* Engine Type */}
-          <View style={styles.engineRow}>
-            <Text style={styles.label}>Engine Type:</Text>
-            <View style={styles.toggleGroup}>
-              {engineOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[styles.toggleButton, engineType === option && styles.toggleButtonActive]}
-                  onPress={() => setEngineType(option)}
-                >
-                  <Text style={[styles.toggleText, engineType === option && styles.toggleTextActive]}>
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* MTOW */}
-          <View style={styles.engineRow}>
-            <Text style={styles.label}>Maximum Takeoff Weight (M TOW):</Text>
-            <TextInput
-              style={styles.mtowInput}
-              placeholder="Input here..."
-              placeholderTextColor={Colors.textPlaceholder}
-              keyboardType="numeric"
-              value={mtow}
-              onChangeText={setMtow}
-            />
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddAircraft}>
-            <Text style={styles.addButtonText}>Add Aircraft</Text>
+          <TouchableOpacity
+            accessibilityLabel="Go back"
+            activeOpacity={0.82}
+            onPress={() => router.back()}
+            style={styles.backButton}>
+            <Ionicons color={Colors.primaryDark} name="arrow-back" size={25} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+
+          <Text style={styles.title}>Aircrafts</Text>
+        </View>
+
+        <View
+          style={[
+            styles.whiteSection,
+            {
+              minHeight: WHITE_SECTION_MIN_HEIGHT,
+              paddingBottom: Math.max(insets.bottom, 16) + 18,
+            },
+          ]}>
+          <View style={styles.cardsWrap}>
+            {aircraft.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>No aircraft yet</Text>
+                <Text style={styles.emptyBody}>Tap Add Aircraft to add your first aircraft.</Text>
+              </View>
+            ) : (
+              aircraft.map((item) => <AircraftCard aircraft={item} key={item.id} />)
+            )}
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => router.push("/homescreen/add_aircraft")}
+            style={styles.addButton}>
+            <Text style={styles.addButtonText}>Add Aircraft</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#FFFFFF",
   },
-
-  // HEADER
-  header: {
-    backgroundColor: Colors.cardBackground,
-    paddingTop: 12,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+  scrollContent: {
+    paddingBottom: 0,
+  },
+  hero: {
+    backgroundColor: "#FFBB57",
+    paddingHorizontal: 24,
+    paddingBottom: 120,
+    overflow: "hidden",
+  },
+  countryBase: {
+    position: "absolute",
+    opacity: 0.96,
+  },
+  countryAmericas: {
+    left: -56,
+    top: -2,
+    width: 194,
+    height: 356,
+    opacity: 0.96,
+  },
+  countryEuraf: {
+    right: -54,
+    top: -8,
+    width: 372,
+    height: 264,
+    opacity: 0.94,
+  },
+  countryAustralia: {
+    right: 24,
+    top: 206,
+    width: 60,
+    height: 50,
+    opacity: 0.96,
   },
   backButton: {
     alignSelf: "flex-start",
-    marginBottom: 8,
-    padding: 4,
-  },
-  backArrow: {
-    fontSize: 22,
-    color: Colors.textPrimary,
+    width: 34,
+    height: 34,
+    justifyContent: "center",
+    marginBottom: 20,
   },
   title: {
-    fontSize: 26,
+    textAlign: "center",
+    color: Colors.primaryDark,
+    fontSize: 42,
     fontWeight: "800",
-    color: Colors.textPrimary,
-    letterSpacing: 0.3,
+    fontFamily: Fonts.rounded,
+    marginTop: 62,
+    marginBottom: 64,
   },
-
-  // SCROLL BODY
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40,
+  whiteSection: {
+    backgroundColor: "#FFFFFF",
+    marginTop: 0,
   },
-
-  // CARD
+  cardsWrap: {
+    paddingHorizontal: 24,
+    marginTop: -40,
+  },
   card: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    marginBottom: 14,
+    backgroundColor: "#EEF2F8",
+    borderRadius: 22,
+    paddingHorizontal: 26,
+    paddingVertical: 18,
+    marginBottom: 20,
     shadowColor: Colors.shadow,
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  emptyCard: {
+    backgroundColor: "#EEF2F8",
+    borderRadius: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 26,
+    marginBottom: 20,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 5 },
     elevation: 3,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-  },
-
-  // INPUT ROW
-  inputRow: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-    width: 110,
+  emptyTitle: {
+    color: Colors.primaryDark,
+    fontSize: 20,
+    fontWeight: "800",
+    fontFamily: Fonts.rounded,
+    marginBottom: 6,
   },
-  input: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.textPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
+  emptyBody: {
+    color: "#244066",
+    fontSize: 14,
+    fontFamily: Fonts.rounded,
   },
-
-  // ENGINE ROW
-  engineRow: {
-    paddingVertical: 12,
-  },
-  toggleGroup: {
+  rule: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 10,
-    gap: 6,
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  toggleButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: Colors.toggleInactive,
+  ruleDash: {
+    width: 8,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: Colors.primaryDark,
+    opacity: 0.92,
   },
-  toggleButtonActive: {
-    backgroundColor: Colors.toggleActiveBackground,
-  },
-  toggleText: {
-    fontSize: 12,
-    color: Colors.toggleInactiveText,
-    fontWeight: "500",
-  },
-  toggleTextActive: {
-    color: Colors.toggleActiveText,
-    fontWeight: "600",
-  },
-
-  // MTOW
-  mtowInput: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-
-  // BUTTONS
-  buttonRow: {
+  cardContent: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 16,
-    marginTop: 8,
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 22,
+    gap: 10,
+  },
+  registrationColumn: {
+    flex: 1.06,
+    gap: 10,
+  },
+  modelColumn: {
+    flex: 1.14,
+    alignItems: "center",
+    gap: 10,
+  },
+  hoursColumn: {
+    width: 58,
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  cardLabel: {
+    color: "#244066",
+    fontSize: 14,
+    fontFamily: Fonts.rounded,
+  },
+  cardValue: {
+    color: Colors.primaryDark,
+    fontSize: 18,
+    fontWeight: "800",
+    fontFamily: Fonts.rounded,
   },
   addButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 36,
-    borderRadius: 30,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    alignSelf: "center",
+    minWidth: 258,
+    marginTop: 4,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "#2E63FF",
+    backgroundColor: "#F8BC59",
+    paddingHorizontal: 30,
+    paddingVertical: 14,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   addButtonText: {
-    color: "#fff",
+    textAlign: "center",
+    color: Colors.primaryDark,
+    fontSize: 18,
     fontWeight: "700",
-    fontSize: 15,
-  },
-  cancelButton: {
-    backgroundColor: Colors.cancelButton,
-    paddingVertical: 15,
-    paddingHorizontal: 36,
-    borderRadius: 30,
-  },
-  cancelButtonText: {
-    color: Colors.cancelText,
-    fontWeight: "600",
-    fontSize: 15,
+    fontFamily: Fonts.rounded,
   },
 });

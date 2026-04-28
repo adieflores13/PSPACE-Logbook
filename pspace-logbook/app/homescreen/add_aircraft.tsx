@@ -11,19 +11,21 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
+import { useAircraft } from "@/context/aircraft-context";
 
 export default function AddAircraftScreen() {
   const router = useRouter();
+  const { addAircraft } = useAircraft();
 
   const [registration, setRegistration] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [variant, setVariant] = useState("");
-  const [numberOfEngines, setNumberOfEngines] = useState<"single" | "multi">("single");
-  const [engineType, setEngineType] = useState<"Pistol" | "Turboprop" | "Turbofan" | "Other">("Pistol");
+  const [numberOfEngines, setNumberOfEngines] = useState<"single" | "multi">("multi");
+  const [engineType, setEngineType] = useState<"Pistol" | "Turboprop" | "Turbofan" | "Other">("Turboprop");
   const [mtow, setMtow] = useState("");
 
-  const engineOptions: Array<"Pistol" | "Turboprop" | "Turbofan" | "Other"> = [
+  const engineOptions: ("Pistol" | "Turboprop" | "Turbofan" | "Other")[] = [
     "Pistol",
     "Turboprop",
     "Turbofan",
@@ -31,15 +33,8 @@ export default function AddAircraftScreen() {
   ];
 
   const handleAddAircraft = () => {
-    console.log({
-      registration,
-      make,
-      model,
-      variant,
-      numberOfEngines,
-      engineType,
-      mtow,
-    });
+    addAircraft({ registration, make, model, variant });
+    router.back();
   };
 
   const handleCancel = () => {
@@ -49,24 +44,21 @@ export default function AddAircraftScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.cardBackground} />
+
+      {/* HEADER SECTION */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Add Aircraft</Text>
+      </View>
+
+      {/* BODY SECTION */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Back Button */}
-        <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoIcon}>⚙✈</Text>
-          </View>
-          <Text style={styles.title}>Add Aircraft</Text>
-        </View>
-
         {/* Basic Info Card */}
         <View style={styles.card}>
           <View style={styles.inputRow}>
@@ -97,7 +89,7 @@ export default function AddAircraftScreen() {
             <Text style={styles.label}>Model:</Text>
             <TextInput
               style={styles.input}
-              placeholder="Model..."
+              placeholder="Make..."
               placeholderTextColor={Colors.textPlaceholder}
               value={model}
               onChangeText={setModel}
@@ -124,34 +116,18 @@ export default function AddAircraftScreen() {
             <Text style={styles.label}>Number of Engines:</Text>
             <View style={styles.toggleGroup}>
               <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  numberOfEngines === "single" && styles.toggleButtonActive,
-                ]}
+                style={[styles.toggleButton, numberOfEngines === "single" && styles.toggleButtonActive]}
                 onPress={() => setNumberOfEngines("single")}
               >
-                <Text
-                  style={[
-                    styles.toggleText,
-                    numberOfEngines === "single" && styles.toggleTextActive,
-                  ]}
-                >
+                <Text style={[styles.toggleText, numberOfEngines === "single" && styles.toggleTextActive]}>
                   Single Engine
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  numberOfEngines === "multi" && styles.toggleButtonActive,
-                ]}
+                style={[styles.toggleButton, numberOfEngines === "multi" && styles.toggleButtonActive]}
                 onPress={() => setNumberOfEngines("multi")}
               >
-                <Text
-                  style={[
-                    styles.toggleText,
-                    numberOfEngines === "multi" && styles.toggleTextActive,
-                  ]}
-                >
+                <Text style={[styles.toggleText, numberOfEngines === "multi" && styles.toggleTextActive]}>
                   Multi Engine
                 </Text>
               </TouchableOpacity>
@@ -167,18 +143,10 @@ export default function AddAircraftScreen() {
               {engineOptions.map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[
-                    styles.toggleButton,
-                    engineType === option && styles.toggleButtonActive,
-                  ]}
+                  style={[styles.toggleButton, engineType === option && styles.toggleButtonActive]}
                   onPress={() => setEngineType(option)}
                 >
-                  <Text
-                    style={[
-                      styles.toggleText,
-                      engineType === option && styles.toggleTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.toggleText, engineType === option && styles.toggleTextActive]}>
                     {option}
                   </Text>
                 </TouchableOpacity>
@@ -189,10 +157,10 @@ export default function AddAircraftScreen() {
           <View style={styles.divider} />
 
           {/* MTOW */}
-          <View style={styles.inputRow}>
+          <View style={styles.engineRow}>
             <Text style={styles.label}>Maximum Takeoff Weight (M TOW):</Text>
             <TextInput
-              style={[styles.input, styles.mtowInput]}
+              style={styles.mtowInput}
               placeholder="Input here..."
               placeholderTextColor={Colors.textPlaceholder}
               keyboardType="numeric"
@@ -221,105 +189,94 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scrollContent: {
+
+  // HEADER
+  header: {
+    backgroundColor: Colors.cardBackground,
+    paddingTop: 12,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
   backButton: {
-    marginTop: 12,
-    marginBottom: 4,
     alignSelf: "flex-start",
+    marginBottom: 8,
     padding: 4,
   },
   backArrow: {
     fontSize: 22,
     color: Colors.textPrimary,
   },
-
-  // Logo
-  logoContainer: {
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  logoIcon: {
-    fontSize: 32,
-  },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 26,
+    fontWeight: "800",
     color: Colors.textPrimary,
     letterSpacing: 0.3,
   },
 
-  // Card
+  // SCROLL BODY
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+
+  // CARD
   card: {
     backgroundColor: Colors.cardBackground,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
     marginBottom: 14,
     shadowColor: Colors.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    elevation: 3,
   },
   divider: {
     height: 1,
     backgroundColor: Colors.divider,
-    marginVertical: 2,
   },
 
-  // Input Row
+  // INPUT ROW
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    flexWrap: "wrap",
+    paddingVertical: 12,
   },
   label: {
     fontSize: 13,
     fontWeight: "600",
     color: Colors.textPrimary,
-    minWidth: 100,
+    width: 110,
   },
   input: {
     flex: 1,
     fontSize: 13,
     color: Colors.textPrimary,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    minWidth: 100,
-  },
-  mtowInput: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingBottom: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
   },
 
-  // Engine Row
+  // ENGINE ROW
   engineRow: {
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   toggleGroup: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 8,
+    marginTop: 10,
     gap: 6,
   },
   toggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
     backgroundColor: Colors.toggleInactive,
   },
   toggleButtonActive: {
@@ -335,33 +292,44 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Buttons
+  // MTOW
+  mtowInput: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    marginTop: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+
+  // BUTTONS
   buttonRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 14,
+    gap: 16,
     marginTop: 8,
   },
   addButton: {
     backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingVertical: 15,
+    paddingHorizontal: 36,
     borderRadius: 30,
     shadowColor: Colors.primary,
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   addButtonText: {
-    color: Colors.toggleActiveText,
+    color: "#fff",
     fontWeight: "700",
     fontSize: 15,
   },
   cancelButton: {
     backgroundColor: Colors.cancelButton,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingVertical: 15,
+    paddingHorizontal: 36,
     borderRadius: 30,
   },
   cancelButtonText: {
