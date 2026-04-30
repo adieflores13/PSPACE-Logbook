@@ -1,3 +1,4 @@
+// C:\nginx\html\pspace-logbook\pspace-logbook\app\(tabs)\explore.tsx
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 

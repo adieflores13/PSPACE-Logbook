@@ -123,7 +123,7 @@ export default function AircraftListScreen() {
           <View style={styles.cardsWrap}>
             {aircraft.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No aircraft sddyet</Text>
+                <Text style={styles.emptyTitle}>No aircraft yet</Text>
                 <Text style={styles.emptyBody}>Tap Add Aircraft to add your first aircraft.</Text>
               </View>
             ) : (
@@ -133,7 +133,7 @@ export default function AircraftListScreen() {
 
           <TouchableOpacity
             activeOpacity={0.88}
-            onPress={() => router.push("/homescreen/add_aircraft")}
+            onPress={() => router.push("/aircraftscreen/add_aircraft")}
             style={styles.addButton}>
             <Text style={styles.addButtonText}>Add Aircraft</Text>
           </TouchableOpacity>
@@ -293,7 +293,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: "#2E63FF",
     backgroundColor: "#F8BC59",
     paddingHorizontal: 30,
     paddingVertical: 14,

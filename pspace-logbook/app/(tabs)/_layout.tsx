@@ -1,3 +1,4 @@
+// C:\nginx\html\pspace-logbook\pspace-logbook\app\(tabs)\_layout.tsx
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
