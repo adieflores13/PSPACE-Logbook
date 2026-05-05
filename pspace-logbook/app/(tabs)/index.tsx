@@ -133,7 +133,7 @@ export default function AircraftListScreen() {
 
           <TouchableOpacity
             activeOpacity={0.88}
-            onPress={() => router.push("/homescreen/add_aircraft")}
+            onPress={() => router.push("/aircraftscreen/add_aircraft")}
             style={styles.addButton}>
             <Text style={styles.addButtonText}>Add Aircraft</Text>
           </TouchableOpacity>
