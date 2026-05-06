@@ -237,7 +237,7 @@ export default function FlightListScreen() {
         <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 }]}>
           <WorldMapBackdrop />
 
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { top: insets.top + 6 }]}>
             <Ionicons name="arrow-back" size={24} color={COLORS.navy} />
           </TouchableOpacity>
 
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   countryEuraf:     { right: -54, top: -8, width: 372, height: 264, opacity: 0.94 },
   countryAustralia: { right: 24, top: 206, width: 60,  height: 50,  opacity: 0.96 },
 
-  backBtn: { position: "absolute", top: 0, left: 24, padding: 6, zIndex: 10 },
+  backBtn: { position: "absolute", left: 24, padding: 6, zIndex: 10 },
 
   heroTitle: {
     color: COLORS.navy,
