@@ -3,7 +3,6 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
 import {
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -45,11 +44,23 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Flights",
-    route: "/flightscreen/flight_list",                                     // ← lands on flight list
-    matchPaths: ["/flightscreen/flight_list", "/flightscreen/add_flight"],  // ← tab stays highlighted on both
+    route: "/flightscreen/flight_list",
+    matchPaths: ["/flightscreen/flight_list", "/flightscreen/add_flight"],
+    icon: (active) => (
+      <Ionicons
+        name={active ? "paper-plane" : "paper-plane-outline"}
+        size={22}
+        color={active ? COLORS.amber : COLORS.inactive}
+      />
+    ),
+  },
+  {
+    label: "Logbook",
+    route: "/logbook",
+    matchPaths: ["/logbook"],
     icon: (active) => (
       <MaterialCommunityIcons
-        name={active ? "book-open" : "book-open-outline"}
+        name={active ? "clipboard-text" : "clipboard-text-outline"}
         size={22}
         color={active ? COLORS.amber : COLORS.inactive}
       />

@@ -1,11 +1,10 @@
-// app/flightscreen/add_flight.tsx
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Alert,
-  Platform,
+  Dimensions,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,271 +12,660 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import ScreenLayout from '@/components/layout/screen-layout';
+import { Fonts } from "@/constants/theme";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-type FlightType = 'Commercial' | 'Private' | 'Cargo' | 'Charter' | '';
+const COUNTRY1 = require("../../assets/images/country1.png");
+const COUNTRY2 = require("../../assets/images/country2.png");
+const COUNTRY3 = require("../../assets/images/country3.png");
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.5);
 
 interface FlightForm {
-  date: Date | null;
-  type: FlightType;
-  totalTime: string;
+  departureDateTime: string;
+  departureLocation: string;
+  arrivalDateTime: string;
+  arrivalLocation: string;
+  aircraftRegistration: string;
+  singlePilotTime: string;
+  pilotInCommand: string;
+  includeSelf: boolean;
+  dayTakeoffs: string;
+  nightTakeoffs: string;
+  dayLandings: string;
+  nightLandings: string;
+  nightTime: string;
+  ifrTime: string;
+  picTime: string;
+  coPilotTime: string;
+  dualTime: string;
+  instructorName: string;
   notes: string;
 }
 
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
-export default function AddFlightScreen() {
-  const router = useRouter();
-
-  const [form, setForm] = useState<FlightForm>({
-    date: null,
-    type: '',
-    totalTime: '',
-    notes: '',
-  });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTypePicker, setShowTypePicker] = useState(false);
-
-  const flightTypes: FlightType[] = ['Commercial', 'Private', 'Cargo', 'Charter'];
-
-  const handleAdd = () => {
-    if (!form.date || !form.type || !form.totalTime) {
-      Alert.alert('Incomplete Form', 'Please fill in Date, Type, and Total Time.');
-      return;
-    }
-    Alert.alert(
-      'Flight Added',
-      `${form.type} flight on ${form.date.toDateString()} (${form.totalTime} hrs) logged!`,
-    );
-  };
-
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-
+function WorldMapBackdrop() {
   return (
-    // ScreenLayout provides the shared footer nav across all pages
-    <ScreenLayout>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.amber} />
-
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.navy} />
-        </TouchableOpacity>
-
-        <View style={styles.logoWrap}>
-          <View style={styles.logoCircle}>
-            <MaterialCommunityIcons name="airplane-cog" size={36} color={COLORS.navy} />
-          </View>
-        </View>
-
-        <Text style={styles.headerTitle}>Add Flight</Text>
-      </View>
-
-      {/* ── FORM ── */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.formContainer}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Date */}
-        <TouchableOpacity
-          style={styles.field}
-          onPress={() => setShowDatePicker(true)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.fieldIcon}>
-            <Ionicons name="airplane-outline" size={20} color={COLORS.amber} />
-          </View>
-          <View style={styles.fieldContent}>
-            <Text style={styles.fieldLabel}>Input Date</Text>
-            <Text style={[styles.fieldValue, !form.date && styles.fieldPlaceholder]}>
-              {form.date ? formatDate(form.date) : 'Date:'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.muted} />
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={form.date ?? new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(_, selected) => {
-              setShowDatePicker(false);
-              if (selected) setForm(f => ({ ...f, date: selected }));
-            }}
-          />
-        )}
-
-        {/* Type */}
-        <TouchableOpacity
-          style={styles.field}
-          onPress={() => setShowTypePicker(v => !v)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.fieldIcon}>
-            <MaterialCommunityIcons name="monitor-dashboard" size={20} color={COLORS.amber} />
-          </View>
-          <View style={styles.fieldContent}>
-            <Text style={styles.fieldLabel}>Input Type</Text>
-            <Text style={[styles.fieldValue, !form.type && styles.fieldPlaceholder]}>
-              {form.type || 'Type:'}
-            </Text>
-          </View>
-          <Ionicons
-            name={showTypePicker ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={COLORS.muted}
-          />
-        </TouchableOpacity>
-
-        {showTypePicker && (
-          <View style={styles.dropdown}>
-            {flightTypes.map(t => (
-              <TouchableOpacity
-                key={t}
-                style={[styles.dropdownItem, form.type === t && styles.dropdownItemActive]}
-                onPress={() => {
-                  setForm(f => ({ ...f, type: t }));
-                  setShowTypePicker(false);
-                }}
-              >
-                <Text style={[styles.dropdownText, form.type === t && styles.dropdownTextActive]}>
-                  {t}
-                </Text>
-                {form.type === t && <Ionicons name="checkmark" size={16} color={COLORS.amber} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Total Time */}
-        <View style={styles.field}>
-          <View style={styles.fieldIcon}>
-            <Ionicons name="time-outline" size={20} color={COLORS.amber} />
-          </View>
-          <View style={styles.fieldContent}>
-            <Text style={styles.fieldLabel}>Input Total Time</Text>
-            <TextInput
-              style={styles.inlineInput}
-              placeholder="Total Time: (e.g. 2.5)"
-              placeholderTextColor={COLORS.muted}
-              value={form.totalTime}
-              onChangeText={v => setForm(f => ({ ...f, totalTime: v }))}
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-            />
-          </View>
-        </View>
-
-        {/* Notes */}
-        <View style={styles.notesField}>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Notes..."
-            placeholderTextColor={COLORS.muted}
-            value={form.notes}
-            onChangeText={v => setForm(f => ({ ...f, notes: v }))}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Buttons */}
-        <View style={styles.btnRow}>
-          <TouchableOpacity style={styles.btnAdd} onPress={handleAdd} activeOpacity={0.85}>
-            <Text style={styles.btnAddText}>Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.btnCancel}
-            onPress={() => router.back()}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </ScreenLayout>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY1} style={[styles.mapBase, styles.mapAmericas]} />
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY2} style={[styles.mapBase, styles.mapEuraf]} />
+      <Image fadeDuration={0} resizeMode="contain" source={COUNTRY3} style={[styles.mapBase, styles.mapAustralia]} />
+    </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COLORS & STYLES  (unchanged from your original)
-// ─────────────────────────────────────────────────────────────────────────────
+type HeroLineFieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+};
+
+function HeroLineField({ label, value, onChangeText }: HeroLineFieldProps) {
+  return (
+    <View style={styles.heroFieldRow}>
+      <Text style={styles.heroFieldLabel}>{label}</Text>
+      <TextInput
+        style={styles.heroLineInput}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder=""
+        placeholderTextColor="rgba(255,255,255,0.38)"
+      />
+    </View>
+  );
+}
+
+type InlineInputRowProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+  keyboardType?: "default" | "numeric" | "decimal-pad";
+};
+
+function InlineInputRow({
+  label,
+  value,
+  onChangeText,
+  placeholder = "Enter here..",
+  keyboardType = "default",
+}: InlineInputRowProps) {
+  return (
+    <View style={styles.inlineRow}>
+      <Text style={styles.inlineLabel}>{label}</Text>
+      <TextInput
+        style={styles.inlineInput}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.placeholder}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+}
+
+type DayNightRowProps = {
+  label: string;
+  dayValue: string;
+  nightValue: string;
+  onChangeDay: (value: string) => void;
+  onChangeNight: (value: string) => void;
+};
+
+function DayNightRow({
+  label,
+  dayValue,
+  nightValue,
+  onChangeDay,
+  onChangeNight,
+}: DayNightRowProps) {
+  return (
+    <View style={styles.dayNightRow}>
+      <Text style={styles.dayNightLabel}>{label}</Text>
+
+      <TextInput
+        style={styles.dayNightInput}
+        value={dayValue}
+        onChangeText={onChangeDay}
+        placeholder="Enter here.."
+        placeholderTextColor={COLORS.placeholder}
+        keyboardType="numeric"
+      />
+
+      <TextInput
+        style={styles.dayNightInput}
+        value={nightValue}
+        onChangeText={onChangeNight}
+        placeholder="Enter here.."
+        placeholderTextColor={COLORS.placeholder}
+        keyboardType="numeric"
+      />
+    </View>
+  );
+}
+
+export default function AddFlightScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const [form, setForm] = useState<FlightForm>({
+    departureDateTime: "",
+    departureLocation: "",
+    arrivalDateTime: "",
+    arrivalLocation: "",
+    aircraftRegistration: "",
+    singlePilotTime: "",
+    pilotInCommand: "",
+    includeSelf: true,
+    dayTakeoffs: "",
+    nightTakeoffs: "",
+    dayLandings: "",
+    nightLandings: "",
+    nightTime: "",
+    ifrTime: "",
+    picTime: "",
+    coPilotTime: "",
+    dualTime: "",
+    instructorName: "",
+    notes: "",
+  });
+
+  const setField = <K extends keyof FlightForm>(key: K, value: FlightForm[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleAdd = () => {
+    if (
+      !form.departureDateTime.trim() ||
+      !form.departureLocation.trim() ||
+      !form.arrivalDateTime.trim() ||
+      !form.arrivalLocation.trim()
+    ) {
+      Alert.alert(
+        "Incomplete Form",
+        "Please fill in Departure and Arrival Date/Time and Location.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Flight Added",
+      `Flight from ${form.departureLocation} to ${form.arrivalLocation} logged.`,
+    );
+  };
+
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View style={styles.screen}>
+        <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+
+        <ScrollView
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 16) + 24 },
+          ]}>
+          <View
+            style={[
+              styles.hero,
+              {
+                minHeight: HERO_HEIGHT + insets.top,
+                paddingTop: insets.top + 8,
+              },
+            ]}>
+            <WorldMapBackdrop />
+
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons color={COLORS.white} name="arrow-back" size={25} />
+            </TouchableOpacity>
+
+            <Text style={styles.title}>Add Flight</Text>
+
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionLabel}>Departure</Text>
+              <View style={styles.airportRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialCommunityIcons color={COLORS.hero} name="airplane-takeoff" size={24} />
+                </View>
+                <View style={styles.heroFieldsWrap}>
+                  <HeroLineField
+                    label="Date/Time:"
+                    value={form.departureDateTime}
+                    onChangeText={(value) => setField("departureDateTime", value)}
+                  />
+                  <HeroLineField
+                    label="Location:"
+                    value={form.departureLocation}
+                    onChangeText={(value) => setField("departureLocation", value)}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionLabel}>Arrival</Text>
+              <View style={styles.airportRow}>
+                <View style={styles.iconCircle}>
+                  <MaterialCommunityIcons color={COLORS.hero} name="airplane-landing" size={24} />
+                </View>
+                <View style={styles.heroFieldsWrap}>
+                  <HeroLineField
+                    label="Date/Time:"
+                    value={form.arrivalDateTime}
+                    onChangeText={(value) => setField("arrivalDateTime", value)}
+                  />
+                  <HeroLineField
+                    label="Location:"
+                    value={form.arrivalLocation}
+                    onChangeText={(value) => setField("arrivalLocation", value)}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.body}>
+            <View style={styles.cardsWrap}>
+              <View style={styles.card}>
+                <InlineInputRow
+                  label="Aircraft Registration:"
+                  value={form.aircraftRegistration}
+                  onChangeText={(value) => setField("aircraftRegistration", value)}
+                  placeholder="Registration...."
+                />
+                <InlineInputRow
+                  label="Single Pilot Time:"
+                  value={form.singlePilotTime}
+                  onChangeText={(value) => setField("singlePilotTime", value)}
+                  placeholder="Make...."
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="Pilot in Command:"
+                  value={form.pilotInCommand}
+                  onChangeText={(value) => setField("pilotInCommand", value)}
+                  placeholder="Make...."
+                />
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setField("includeSelf", !form.includeSelf)}
+                  style={styles.checkboxRow}>
+                  <View style={styles.checkboxBox}>
+                    {form.includeSelf ? (
+                      <Ionicons color={COLORS.textPrimary} name="checkmark" size={16} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Include self</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.dayNightHeader}>
+                  <View style={styles.dayNightLabelSpacer} />
+                  <Text style={styles.dayNightHeaderText}>Day</Text>
+                  <Text style={styles.dayNightHeaderText}>Night</Text>
+                </View>
+
+                <DayNightRow
+                  label="Takeoffs:"
+                  dayValue={form.dayTakeoffs}
+                  nightValue={form.nightTakeoffs}
+                  onChangeDay={(value) => setField("dayTakeoffs", value)}
+                  onChangeNight={(value) => setField("nightTakeoffs", value)}
+                />
+                <DayNightRow
+                  label="Landings:"
+                  dayValue={form.dayLandings}
+                  nightValue={form.nightLandings}
+                  onChangeDay={(value) => setField("dayLandings", value)}
+                  onChangeNight={(value) => setField("nightLandings", value)}
+                />
+              </View>
+
+              <View style={styles.card}>
+                <InlineInputRow
+                  label="Night Time:"
+                  value={form.nightTime}
+                  onChangeText={(value) => setField("nightTime", value)}
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="IFR Time:"
+                  value={form.ifrTime}
+                  onChangeText={(value) => setField("ifrTime", value)}
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="PIC Time:"
+                  value={form.picTime}
+                  onChangeText={(value) => setField("picTime", value)}
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="Co-Pilot Time:"
+                  value={form.coPilotTime}
+                  onChangeText={(value) => setField("coPilotTime", value)}
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="Dual Time:"
+                  value={form.dualTime}
+                  onChangeText={(value) => setField("dualTime", value)}
+                  keyboardType="decimal-pad"
+                />
+                <InlineInputRow
+                  label="Instructor Name:"
+                  value={form.instructorName}
+                  onChangeText={(value) => setField("instructorName", value)}
+                />
+                <InlineInputRow
+                  label="Notes:"
+                  value={form.notes}
+                  onChangeText={(value) => setField("notes", value)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity activeOpacity={0.88} onPress={handleAdd} style={styles.addButton}>
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.back()}
+                style={styles.cancelButton}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </>
+  );
+}
+
 const COLORS = {
-  amber: '#F5A623', amberLight: '#FFC04D', navy: '#1A2340', navyLight: '#2C3A5C',
-  white: '#FFFFFF', offWhite: '#F7F8FC', muted: '#9AA3B8', border: '#E4E8F0', red: '#D64045',
+  bodyBackground: "#DEDEDF",
+  hero: "#032451",
+  heroMap: "#3A5E83",
+  white: "#F5F6F8",
+  yellow: "#F8BD53",
+  card: "#E8E8E9",
+  border: "#8A8C91",
+  textPrimary: "#0E284B",
+  textLight: "#F1F5FB",
+  placeholder: "#B7B9BD",
+  blueStroke: "#2A65FF",
 };
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: COLORS.amber, paddingTop: 34, paddingBottom: 20, alignItems: 'center' },
-  backBtn: { position: 'absolute', left: 20, top: 12, padding: 6, zIndex: 10 },
-  logoWrap: { marginBottom: 10 },
-  logoCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.bodyBackground,
   },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: COLORS.navy, letterSpacing: 0.3 },
-  scroll: { flex: 1, backgroundColor: COLORS.offWhite },
-  formContainer: { padding: 20, paddingBottom: 40, gap: 12 },
-  field: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
-    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
-    borderWidth: 1, borderColor: COLORS.border,
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: COLORS.bodyBackground,
   },
-  fieldIcon: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: COLORS.offWhite, alignItems: 'center', justifyContent: 'center', marginRight: 12,
+
+  hero: {
+    paddingHorizontal: 18,
+    paddingBottom: 112,
+    backgroundColor: COLORS.hero,
+    overflow: "hidden",
   },
-  fieldContent: { flex: 1 },
-  fieldLabel: { fontSize: 11, color: COLORS.muted, fontWeight: '500', marginBottom: 2, letterSpacing: 0.3 },
-  fieldValue: { fontSize: 15, color: COLORS.navy, fontWeight: '700' },
-  fieldPlaceholder: { color: COLORS.muted, fontWeight: '600' },
-  inlineInput: { fontSize: 15, color: COLORS.navy, fontWeight: '700', padding: 0, margin: 0 },
-  dropdown: {
-    backgroundColor: COLORS.white, borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4, marginTop: -6,
+  mapBase: {
+    position: "absolute",
+    tintColor: COLORS.heroMap,
+    opacity: 0.72,
   },
-  dropdownItem: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  mapAmericas: {
+    left: -84,
+    top: -44,
+    width: 228,
+    height: 418,
   },
-  dropdownItemActive: { backgroundColor: '#FFF8EC' },
-  dropdownText: { fontSize: 15, color: COLORS.navyLight, fontWeight: '500' },
-  dropdownTextActive: { color: COLORS.amber, fontWeight: '700' },
-  notesField: {
-    backgroundColor: COLORS.white, borderRadius: 14, padding: 16, minHeight: 120,
-    borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  mapEuraf: {
+    right: -54,
+    top: -30,
+    width: 378,
+    height: 288,
   },
-  notesInput: { flex: 1, fontSize: 14, color: COLORS.navy, minHeight: 90 },
-  btnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  btnAdd: {
-    flex: 1, backgroundColor: COLORS.amber, borderRadius: 14, paddingVertical: 16,
-    alignItems: 'center', shadowColor: COLORS.amber,
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 5,
+  mapAustralia: {
+    right: 56,
+    top: 224,
+    width: 56,
+    height: 46,
+    opacity: 0.42,
   },
-  btnAddText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
-  btnCancel: {
-    flex: 1, backgroundColor: COLORS.navy, borderRadius: 14, paddingVertical: 16,
-    alignItems: 'center', shadowColor: COLORS.navy,
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5,
+  backButton: {
+    width: 34,
+    height: 34,
+    justifyContent: "center",
   },
-  btnCancelText: { color: COLORS.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  title: {
+    color: COLORS.textLight,
+    fontSize: 28,
+    fontFamily: Fonts.rounded,
+    fontWeight: "800",
+    lineHeight: 34,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  sectionBlock: {
+    marginTop: 2,
+  },
+  sectionLabel: {
+    color: COLORS.yellow,
+    fontFamily: Fonts.rounded,
+    fontSize: 17,
+    fontWeight: "500",
+    marginLeft: 68,
+    marginBottom: 6,
+  },
+  airportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  heroFieldsWrap: {
+    flex: 1,
+  },
+  heroFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 10,
+  },
+  heroFieldLabel: {
+    minWidth: 84,
+    color: COLORS.white,
+    fontFamily: Fonts.rounded,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  heroLineInput: {
+    flex: 1,
+    borderBottomWidth: 1.4,
+    borderBottomColor: COLORS.white,
+    color: COLORS.white,
+    fontFamily: Fonts.rounded,
+    fontSize: 16,
+    paddingBottom: 3,
+    paddingTop: 0,
+  },
+
+  body: {
+    marginTop: 0,
+    backgroundColor: COLORS.bodyBackground,
+  },
+  cardsWrap: {
+    paddingHorizontal: 8,
+    marginTop: -66,
+  },
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 7,
+    elevation: 5,
+  },
+  inlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  inlineLabel: {
+    width: "34%",
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 13,
+    fontWeight: "700",
+    paddingRight: 8,
+  },
+  inlineInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.6,
+    borderColor: COLORS.border,
+    backgroundColor: "#ECECED",
+    paddingHorizontal: 12,
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 13,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    marginLeft: 40,
+  },
+  checkboxBox: {
+    width: 21,
+    height: 21,
+    borderWidth: 1.8,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    backgroundColor: "#DDDEE0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  dayNightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  dayNightLabelSpacer: {
+    width: "24%",
+  },
+  dayNightHeaderText: {
+    flex: 1,
+    textAlign: "center",
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  dayNightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  dayNightLabel: {
+    width: "24%",
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  dayNightInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1.4,
+    borderColor: COLORS.border,
+    backgroundColor: "#ECECED",
+    paddingHorizontal: 12,
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 12,
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 22,
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  addButton: {
+    flex: 1,
+    maxWidth: 160,
+    height: 62,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: COLORS.blueStroke,
+    backgroundColor: COLORS.yellow,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addButtonText: {
+    color: COLORS.textPrimary,
+    fontFamily: Fonts.rounded,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  cancelButton: {
+    flex: 1,
+    maxWidth: 160,
+    height: 62,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: COLORS.blueStroke,
+    backgroundColor: "#092B52",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButtonText: {
+    color: COLORS.white,
+    fontFamily: Fonts.rounded,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
 });
