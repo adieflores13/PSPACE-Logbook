@@ -20,7 +20,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   {
     label: "Dashboard",
-    route: "/dashboardscreen",
+    route: "/dashboardscreen/dashboard",
     matchPaths: ["/dashboardscreen/dashboard"],
     icon: (active) => (
       <Ionicons
