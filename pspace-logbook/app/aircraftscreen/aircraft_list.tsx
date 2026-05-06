@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAircraft } from "@/context/aircraft-context";
 import { Fonts } from "@/constants/theme";
+import ScreenLayout from "@/components/layout/screen-layout";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.34);
@@ -37,7 +38,7 @@ function DashedRule() {
 
 function WorldMapBackdrop() {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.worldMapLayer]}>
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY1} style={[styles.countryBase, styles.countryAmericas]} />
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY2} style={[styles.countryBase, styles.countryEuraf]} />
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY3} style={[styles.countryBase, styles.countryAustralia]} />
@@ -94,52 +95,54 @@ export default function AircraftListScreen() {
   const { aircraft } = useAircraft();
 
   return (
-    <View style={styles.screen}>
-      <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
+    <ScreenLayout>
+      <View style={styles.screen}>
+        <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
 
-      <ScrollView bounces={false} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 }]}>
-          <WorldMapBackdrop />
+        <ScrollView bounces={false} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 }]}>
+            <WorldMapBackdrop />
 
-          <TouchableOpacity
-            accessibilityLabel="Go back"
-            activeOpacity={0.82}
-            onPress={() => router.back()}
-            style={styles.backButton}>
-            <Ionicons color={Colors.primaryDark} name="arrow-back" size={25} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityLabel="Go back"
+              activeOpacity={0.82}
+              onPress={() => router.back()}
+              style={styles.backButton}>
+              <Ionicons color={Colors.primaryDark} name="arrow-back" size={25} />
+            </TouchableOpacity>
 
-          <Text style={styles.title}>Aircrafts</Text>
-        </View>
-
-        <View
-          style={[
-            styles.whiteSection,
-            {
-              minHeight: WHITE_SECTION_MIN_HEIGHT,
-              paddingBottom: Math.max(insets.bottom, 16) + 18,
-            },
-          ]}>
-          <View style={styles.cardsWrap}>
-            {aircraft.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No aircraft yet</Text>
-                <Text style={styles.emptyBody}>Tap Add Aircraft to add your first aircraft.</Text>
-              </View>
-            ) : (
-              aircraft.map((item) => <AircraftCard aircraft={item} key={item.id} />)
-            )}
+            <Text style={styles.title}>Aircrafts</Text>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.88}
-            onPress={() => router.push("/aircraftscreen/add_aircraft")}
-            style={styles.addButton}>
-            <Text style={styles.addButtonText}>Add Aircraft</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+          <View
+            style={[
+              styles.whiteSection,
+              {
+                minHeight: WHITE_SECTION_MIN_HEIGHT,
+                paddingBottom: Math.max(insets.bottom, 16) + 18,
+              },
+            ]}>
+            <View style={styles.cardsWrap}>
+              {aircraft.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyTitle}>No aircraft yet</Text>
+                  <Text style={styles.emptyBody}>Tap Add Aircraft to add your first aircraft.</Text>
+                </View>
+              ) : (
+                aircraft.map((item) => <AircraftCard aircraft={item} key={item.id} />)
+              )}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => router.push("/aircraftscreen/add_aircraft")}
+              style={styles.addButton}>
+              <Text style={styles.addButtonText}>Add Aircraft</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </ScreenLayout>
   );
 }
 
@@ -155,7 +158,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFBB57",
     paddingHorizontal: 24,
     paddingBottom: 120,
+    position: "relative",
     overflow: "hidden",
+  },
+  worldMapLayer: {
+    zIndex: 0,
   },
   countryBase: {
     position: "absolute",
@@ -188,15 +195,21 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "center",
     marginBottom: 20,
+    zIndex: 2,
+    elevation: 2,
   },
   title: {
     textAlign: "center",
     color: Colors.primaryDark,
-    fontSize: 42,
+    fontSize: 40,
+    lineHeight: 46,
     fontWeight: "800",
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
     marginTop: 62,
     marginBottom: 64,
+    paddingTop: 4,
+    zIndex: 2,
+    elevation: 2,
   },
   whiteSection: {
     backgroundColor: "#FFFFFF",

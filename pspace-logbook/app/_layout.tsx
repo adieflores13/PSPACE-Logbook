@@ -20,6 +20,8 @@ export default function RootLayout() {
 
           {/* Main app screens */}
           <Stack.Screen name="dashboardscreen/dashboard"          options={{ headerShown: false }} />
+          <Stack.Screen name="aircraftscreen/aircraft_list"       options={{ headerShown: false }} />
+          <Stack.Screen name="aircraftscreen/add_aircraft"        options={{ headerShown: false }} />
           <Stack.Screen name="flightscreen/flight_list"           options={{ headerShown: false }} />
           <Stack.Screen name="flightscreen/add_flight"            options={{ headerShown: false }} />
           <Stack.Screen name="logbook"                            options={{ headerShown: false }} />

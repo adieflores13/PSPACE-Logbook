@@ -192,11 +192,13 @@ const styles = StyleSheet.create({
   title: {
     textAlign: "center",
     color: Colors.primaryDark,
-    fontSize: 42,
+    fontSize: 40,
+    lineHeight: 46,
     fontWeight: "800",
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
     marginTop: 62,
     marginBottom: 64,
+    paddingTop: 4,
   },
   whiteSection: {
     backgroundColor: "#FFFFFF",
