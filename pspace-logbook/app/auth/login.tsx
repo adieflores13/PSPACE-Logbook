@@ -17,6 +17,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenLayout from "@/components/layout/screen-layout";
+import { Fonts } from "@/constants/theme";
 
 // ─── Temporary test credentials ───────────────────────────────────────────────
 const TEST_EMAIL    = "Loisbecket@gmail.com";
@@ -184,18 +185,24 @@ export default function LoginScreen() {
   );
 }
 
-const NAVY   = "#1A2340";
-const AMBER  = "#F5A623";
+const NAVY   = "#032451";
+const AMBER  = "#FFBB57";
 const WHITE  = "#FFFFFF";
-const BORDER = "#E8ECF4";
+const BG = "#D8DADD";
+const TOP_PANEL = "#E5E7EA";
+const SURFACE = "#F1F2F4";
+const BORDER = "#D2D6DC";
+const MUTED = "#72767D";
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, backgroundColor: "#F7F8FC" },
+  scroll: { flexGrow: 1, backgroundColor: BG },
 
   header: {
-    backgroundColor: WHITE,
+    backgroundColor: TOP_PANEL,
     alignItems: "center",
     paddingVertical: 34,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
 
   logoRow: {
@@ -270,6 +277,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2.2,
     color: NAVY,
+    fontFamily: Fonts.rounded,
   },
 
   card: {
@@ -285,10 +293,11 @@ const styles = StyleSheet.create({
 
   signInTitle: {
     fontSize: 26,
-    fontWeight: "700",
-    color: WHITE,
+    fontWeight: "800",
+    color: AMBER,
     alignSelf: "center",
     marginBottom: 20,
+    fontFamily: Fonts.rounded,
   },
 
   illustrationWrap: {
@@ -317,7 +326,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
     borderWidth: 5,
-    borderColor: "#F5A623",
+    borderColor: AMBER,
     borderBottomWidth: 0,
     marginBottom: -2,
   },
@@ -325,7 +334,7 @@ const styles = StyleSheet.create({
   lockFace: {
     width: 48,
     height: 40,
-    backgroundColor: "#F5A623",
+    backgroundColor: AMBER,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -352,14 +361,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 5,
-    borderColor: "#F5A623",
+    borderColor: AMBER,
     backgroundColor: "transparent",
   },
 
   keyShaft: {
     width: 30,
     height: 7,
-    backgroundColor: "#F5A623",
+    backgroundColor: AMBER,
     borderRadius: 2,
   },
 
@@ -369,7 +378,7 @@ const styles = StyleSheet.create({
     bottom: -4,
     width: 7,
     height: 9,
-    backgroundColor: "#F5A623",
+    backgroundColor: AMBER,
     borderRadius: 2,
   },
 
@@ -384,7 +393,7 @@ const styles = StyleSheet.create({
 
   formCard: {
     width: "100%",
-    backgroundColor: WHITE,
+    backgroundColor: SURFACE,
     borderRadius: 20,
     padding: 20,
     shadowColor: "#000",
@@ -401,7 +410,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: Platform.OS === "ios" ? 14 : 10,
-    backgroundColor: "#FAFBFE",
+    backgroundColor: WHITE,
   },
 
   inputWrapRow: {
@@ -412,6 +421,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 15,
     color: NAVY,
+    fontFamily: Fonts.rounded,
   },
 
   rowBetween: {
@@ -431,7 +441,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: "#9AA3B8",
+    borderColor: MUTED,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -441,12 +451,13 @@ const styles = StyleSheet.create({
     borderColor: AMBER,
   },
 
-  rememberText: { fontSize: 13, color: "#6B7280" },
+  rememberText: { fontSize: 13, color: MUTED, fontFamily: Fonts.rounded },
 
   forgotText: {
     fontSize: 13,
     fontWeight: "700",
     color: NAVY,
+    fontFamily: Fonts.rounded,
   },
 
   errorText: {
@@ -470,8 +481,9 @@ const styles = StyleSheet.create({
   loginBtnText: {
     fontSize: 16,
     fontWeight: "700",
-    color: WHITE,
+    color: NAVY,
     letterSpacing: 0.5,
+    fontFamily: Fonts.rounded,
   },
 
   createRow: {
@@ -480,11 +492,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  createText: { fontSize: 13, color: "#6B7280" },
+  createText: { fontSize: 13, color: MUTED, fontFamily: Fonts.rounded },
 
   createLink: {
     fontSize: 13,
     fontWeight: "700",
     color: NAVY,
+    fontFamily: Fonts.rounded,
   },
 });

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Alert,
@@ -16,6 +16,8 @@ import ScreenLayout from "@/components/layout/screen-layout";
 import { Fonts } from "@/constants/theme";
 
 const LOGO_WITH_MAP = require("../assets/images/logo-with-map.png");
+const CADET_NAME = "Juan dela Cruz";
+const NOTIFICATION_COUNT = 3;
 
 type LogbookEntry = {
   id: string;
@@ -88,25 +90,32 @@ export default function LogbookScreen() {
           </View>
 
           <View style={styles.heroPanel}>
-            <View style={styles.welcomeRow}>
-              <View style={styles.avatarWrap}>
-                <Ionicons color="#F8E7CF" name="person" size={30} />
-              </View>
-
-              <Text style={styles.welcomeText}>
-                Welcome,{"\n"}(Cadet Name)!
-              </Text>
-
-              <View style={styles.notificationWrap}>
-                <Ionicons color={COLORS.white} name="notifications" size={24} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>3</Text>
+            <View style={styles.heroBanner}>
+              <View style={styles.welcomeRow}>
+                <View style={styles.avatarWrap}>
+                  <FontAwesome5 color={COLORS.gold} name="user-astronaut" size={20} />
                 </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.welcomeText}>Welcome,</Text>
+                  <Text style={styles.cadetName}>{CADET_NAME}!</Text>
+                </View>
+
+                <TouchableOpacity activeOpacity={0.7} style={styles.bellWrap}>
+                  <Ionicons color={COLORS.white} name="notifications" size={24} />
+                  {NOTIFICATION_COUNT > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.logbookTitle}>LOGBOOK</Text>
-            <Text style={styles.logbookSubtitle}>Log hours, monitor progress, and stay organized</Text>
+            <View style={styles.heroTitleBlock}>
+              <Text style={styles.logbookTitle}>LOGBOOK</Text>
+              <Text style={styles.logbookSubtitle}>Log hours, monitor progress, and stay organized</Text>
+            </View>
           </View>
 
           <View style={styles.cardsSection}>
@@ -154,72 +163,79 @@ const styles = StyleSheet.create({
   },
   heroPanel: {
     backgroundColor: COLORS.navy,
-    paddingHorizontal: 28,
-    paddingTop: 18,
-    paddingBottom: 28,
+  },
+  heroBanner: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  heroTitleBlock: {
+    paddingHorizontal: 18,
+    paddingBottom: 22,
+    alignItems: "center",
   },
   welcomeRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   avatarWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#6B826F",
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 2,
+    borderColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
   welcomeText: {
-    color: COLORS.white,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "500",
     fontFamily: Fonts.rounded,
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 23,
-    flex: 1,
   },
-  notificationWrap: {
-    width: 30,
-    height: 30,
-    justifyContent: "center",
-    alignItems: "center",
+  cadetName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: COLORS.white,
+    letterSpacing: 0.3,
+    fontFamily: Fonts.rounded,
+  },
+  bellWrap: {
+    position: "relative",
+    padding: 4,
   },
   badge: {
     position: "absolute",
-    right: -3,
-    top: -1,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: 0,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
   },
   badgeText: {
-    color: COLORS.navy,
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: "800",
+    color: COLORS.white,
     fontFamily: Fonts.rounded,
-    lineHeight: 14,
   },
   logbookTitle: {
     color: COLORS.gold,
     fontFamily: Fonts.rounded,
-    fontSize: 34,
-    fontWeight: "800",
+    fontSize: 30,
+    fontWeight: "900",
     textAlign: "center",
-    marginTop: 36,
-    letterSpacing: 0.7,
+    letterSpacing: 3,
   },
   logbookSubtitle: {
     textAlign: "center",
-    color: "#CFD8E6",
+    color: "rgba(255,255,255,0.55)",
     fontFamily: Fonts.rounded,
-    fontSize: 13,
-    marginTop: 6,
-    marginBottom: 4,
+    fontSize: 11,
+    marginTop: 4,
   },
   cardsSection: {
     paddingTop: 24,

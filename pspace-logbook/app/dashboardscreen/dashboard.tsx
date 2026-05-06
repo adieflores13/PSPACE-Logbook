@@ -5,11 +5,11 @@ import {
   Easing,
   Image,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,13 +32,14 @@ const STATS = {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NAVY  = "#1A2340";
-const AMBER = "#F5A623";
+const NAVY  = "#032451";
+const AMBER = "#FFBB57";
 const WHITE = "#FFFFFF";
-const BG    = "#F7F8FC";
-const CARD  = "#FFFFFF";
-const MUTED = "#9AA3B8";
-const BORDER= "#E8ECF4";
+const BG    = "#D8DADD";
+const CARD  = "#F1F2F4";
+const MUTED = "#72767D";
+const BORDER= "#D2D6DC";
+const TOP_PANEL = "#E5E7EA";
 
 // Animated stat card
 function StatCard({
@@ -98,16 +99,15 @@ export default function DashboardScreen() {
 
   return (
     <ScreenLayout>
+      <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
+
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 8 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Top Logo Bar ── */}
-        <View className="" style={styles.logoBar}>
+        <View className="" style={[styles.logoBar, { paddingTop: insets.top + 8 }]}>
           <Image
             source={require("@/assets/images/logo-with-map.png")}
             style={styles.logoImage}
@@ -243,16 +243,17 @@ const styles = StyleSheet.create({
   // ── Logo bar ────────────────────────────────────────────────────────────────
   logoBar: {
     alignItems: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 10,
-    backgroundColor: WHITE,
+    justifyContent: "center",
+    height: 176,
+    backgroundColor: TOP_PANEL,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
 
   logoImage: {
-    width: 120,
-    height: 60,
+    width: 126,
+    height: 86,
+    marginTop: 12,
   },
 
   // ── Banner ───────────────────────────────────────────────────────────────────

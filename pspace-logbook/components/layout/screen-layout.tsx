@@ -31,9 +31,21 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    label: "Logbook",
+    route: "/logbook",
+    matchPaths: ["/logbook"],
+    icon: (active) => (
+      <MaterialCommunityIcons
+        name={active ? "clipboard-text" : "clipboard-text-outline"}
+        size={22}
+        color={active ? COLORS.amber : COLORS.inactive}
+      />
+    ),
+  },
+  {
     label: "Aircrafts",
-    route: "/aircraftscreen/aircraft_list",                                    
-    matchPaths: ["/aircraftscreen/aircraft_list", "/aircraftscreen/add_aircraft"],  
+    route: "/aircraftscreen/aircraft_list",
+    matchPaths: ["/aircraftscreen/aircraft_list", "/aircraftscreen/add_aircraft"],
     icon: (active) => (
       <MaterialCommunityIcons
         name={active ? "book-open" : "book-open-outline"}
@@ -49,18 +61,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: (active) => (
       <Ionicons
         name={active ? "paper-plane" : "paper-plane-outline"}
-        size={22}
-        color={active ? COLORS.amber : COLORS.inactive}
-      />
-    ),
-  },
-  {
-    label: "Logbook",
-    route: "/logbook",
-    matchPaths: ["/logbook"],
-    icon: (active) => (
-      <MaterialCommunityIcons
-        name={active ? "clipboard-text" : "clipboard-text-outline"}
         size={22}
         color={active ? COLORS.amber : COLORS.inactive}
       />
