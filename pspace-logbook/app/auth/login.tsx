@@ -20,7 +20,7 @@ import ScreenLayout from "@/components/layout/screen-layout";
 import { Fonts } from "@/constants/theme";
 
 // ─── Temporary test credentials ───────────────────────────────────────────────
-const TEST_EMAIL    = "Loisbecket@gmail.com";
+const TEST_EMAIL    = "pspaceteam@team.com";
 const TEST_PASSWORD = "password123";
 // ─────────────────────────────────────────────────────────────────────────────
 
