@@ -8,7 +8,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "backend:install": "npm --prefix backend install",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:build": "npm --prefix backend run build",
+    "backend:prisma:generate": "npm --prefix backend run prisma:generate",
+    "backend:prisma:migrate": "npm --prefix backend run prisma:migrate",
+    "backend:prisma:deploy": "npm --prefix backend run prisma:deploy"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
