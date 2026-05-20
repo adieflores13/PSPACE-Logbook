@@ -28,7 +28,7 @@ const COUNTRY3 = require("../../assets/images/country3.png");
 // ─────────────────────────────────────────────────────────────────────────────
 // SAMPLE DATA
 // ─────────────────────────────────────────────────────────────────────────────
-type FlightType = "Commercial" | "Private" | "Cargo";
+type FlightType = "Commercial" | "Private" | "Cargo" | "Charter";
 
 interface Flight {
   id: string;
@@ -73,6 +73,18 @@ const SAMPLE_FLIGHTS: Flight[] = [
   },
   {
     id: "3",
+    date: "Apr 22, 2026",
+    day: "22",
+    month: "Apr",
+    year: "2026",
+    type: "Charter",
+    totalTime: 5.8,
+    registration: "RP-C1104",
+    departure: "RPLL",
+    arrival: "RPMZ",
+  },
+  {
+    id: "4",
     date: "Apr 18, 2026",
     day: "18",
     month: "Apr",
@@ -85,7 +97,7 @@ const SAMPLE_FLIGHTS: Flight[] = [
     notes: "Night flight, cargo delivery.",
   },
   {
-    id: "4",
+    id: "5",
     date: "Apr 14, 2026",
     day: "14",
     month: "Apr",
@@ -97,7 +109,7 @@ const SAMPLE_FLIGHTS: Flight[] = [
     arrival: "RPMD",
   },
   {
-    id: "5",
+    id: "6",
     date: "Apr 10, 2026",
     day: "10",
     month: "Apr",
@@ -117,8 +129,8 @@ const SAMPLE_FLIGHTS: Flight[] = [
 const TYPE_META: Record<FlightType, { accent: string; bg: string }> = {
   Commercial: { accent: Colors.commercialAccent, bg: Colors.commercialBg },
   Private:    { accent: Colors.privateAccent,    bg: Colors.privateBg    },
-
   Cargo:      { accent: Colors.cargoAccent,      bg: Colors.cargoBg      },
+  Charter:    { accent: "#9B59D9",               bg: "#EFE4FA"           },
 };
 
 function totalHours(flights: Flight[]) {
@@ -157,7 +169,7 @@ function StatChip({ label, value }: { label: string; value: string }) {
 // FILTER PILL
 // ─────────────────────────────────────────────────────────────────────────────
 type FilterType = "All" | FlightType;
-const FILTERS: FilterType[] = ["All", "Commercial", "Private", "Cargo"];
+const FILTERS: FilterType[] = ["All", "Commercial", "Private", "Cargo", "Charter"];
 
 function FilterPill({
   label,
@@ -188,49 +200,74 @@ function FlightCard({ flight, onPress }: { flight: Flight; onPress: () => void }
   const meta = TYPE_META[flight.type];
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.82}>
-      <View style={[styles.cardAccent, { backgroundColor: meta.accent }]} />
-
-      <View style={styles.dateCol}>
-        <Text style={styles.dateMonth}>{flight.month}</Text>
-        <Text style={styles.dateDay}>{flight.day}</Text>
-        <Text style={styles.dateYear}>{flight.year}</Text>
-      </View>
-
-      <View style={styles.cardDivider} />
-
-      <View style={styles.cardCenter}>
-        <View style={styles.regRow}>
-          <Ionicons name="airplane" size={11} color={Colors.yellow} />
-          <Text style={styles.regText}>{flight.registration}</Text>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      {/* ── HEADER STRIP ── */}
+      <View style={[styles.cardHeader, { backgroundColor: meta.accent }]}>
+        <View style={styles.cardHeaderLeft}>
+          <Ionicons name="airplane" size={14} color={Colors.white} />
+          <Text style={styles.cardHeaderFlt}>FLT</Text>
         </View>
-
-        <View style={styles.routeRow}>
-          <Text style={styles.icao}>{flight.departure}</Text>
-          <View style={styles.routeLineWrap}>
-            <View style={styles.routeDot} />
-            <View style={styles.routeLine} />
-            <Ionicons name="airplane" size={12} color={Colors.yellow} style={styles.routePlane} />
-            <View style={styles.routeLine} />
-            <View style={styles.routeDot} />
-          </View>
-          <Text style={styles.icao}>{flight.arrival}</Text>
-        </View>
-
-        <View style={styles.badgeNotesRow}>
-          <View style={[styles.typeBadge, { backgroundColor: meta.bg }]}>
-            <Text style={[styles.typeText, { color: meta.accent }]}>{flight.type}</Text>
-          </View>
-          {flight.notes ? (
-            <Text style={styles.notesText} numberOfLines={1}>{flight.notes}</Text>
-          ) : null}
+        <View style={styles.cardHeaderDivider} />
+        <View style={styles.cardHeaderRight}>
+          <Text style={styles.cardHeaderReg}>{flight.registration}</Text>
         </View>
       </View>
 
-      <View style={styles.cardRight}>
-        <Text style={styles.hoursValue}>{flight.totalTime.toFixed(1)}</Text>
-        <Text style={styles.hoursUnit}>hrs</Text>
-        <Text style={styles.cardDateSmall}>{flight.date}</Text>
+      {/* ── BODY (3 columns) ── */}
+      <View style={styles.cardBody}>
+        {/* Date column */}
+        <View style={styles.dateCol}>
+          <Text style={styles.dateMonth}>{flight.month}</Text>
+          <Text style={styles.dateDay}>{flight.day}</Text>
+          <Text style={styles.dateYear}>{flight.year}</Text>
+        </View>
+
+        <View style={styles.cardDivider} />
+
+        {/* Center column: route + footer */}
+        <View style={styles.cardCenter}>
+          <View style={styles.routeRow}>
+            {/* Departure icon */}
+            <View style={styles.routeIcon}>
+              <MaterialCommunityIcons name="airplane-takeoff" size={14} color={Colors.textPrimary} />
+            </View>
+            <Text style={styles.icao}>{flight.departure}</Text>
+
+            {/* Route line with badge centered */}
+            <View style={styles.routeLineWrap}>
+              <View style={styles.routeDot} />
+              <View style={styles.routeLine} />
+              <Ionicons name="airplane" size={12} color={Colors.textPrimary} style={styles.routePlane} />
+              <View style={[styles.typeBadge, { backgroundColor: meta.bg }]}>
+                <Text style={[styles.typeText, { color: meta.accent }]}>{flight.type}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.icao}>{flight.arrival}</Text>
+            {/* Arrival icon */}
+            <View style={styles.routeIcon}>
+              <MaterialCommunityIcons name="airplane-landing" size={14} color={Colors.textPrimary} />
+            </View>
+          </View>
+
+          {/* Footer: notes (left) + full date (right) */}
+          <View style={styles.cardFooterRow}>
+            {flight.notes ? (
+              <Text style={styles.notesText} numberOfLines={1}>{flight.notes}</Text>
+            ) : (
+              <View style={{ flex: 1 }} />
+            )}
+            <Text style={styles.cardFooterDate}>{flight.date}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardDivider} />
+
+        {/* Hours column */}
+        <View style={styles.cardRight}>
+          <Text style={styles.hoursValue}>{flight.totalTime.toFixed(1)}</Text>
+          <Text style={styles.hoursUnit}>hrs</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -248,7 +285,7 @@ export default function FlightListScreen() {
     activeFilter === "All"
       ? SAMPLE_FLIGHTS
       : SAMPLE_FLIGHTS.filter((f) => f.type === activeFilter);
- 
+
   return (
     <ScreenLayout>
       <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
@@ -451,11 +488,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
+  // ── CARD CONTAINER ──
   card: {
-    flexDirection: "row",
     backgroundColor: Colors.card,
-    borderRadius: 18,
-    marginBottom: 12,
+    // borderRadius: 14,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    marginBottom: 14,
     overflow: "hidden",
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 4 },
@@ -464,136 +503,185 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    minHeight: 90,
   },
-  cardAccent: { width: 5 },
 
+  // ── HEADER STRIP ──
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 24,
+  },
+  cardHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    width: 60, // matches dateCol width for vertical alignment
+  },
+  cardHeaderFlt: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: "700",
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.5,
+  },
+  cardHeaderDivider: {
+    width: 1,
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  cardHeaderRight: {
+    flex: 1,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  cardHeaderReg: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: "700",
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.3,
+  },
+
+  // ── BODY ──
+  cardBody: {
+    flexDirection: "row",
+    minHeight: 96,
+  },
+
+  // Date column
   dateCol: {
-    width: 52,
+    width: 60,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-    paddingLeft: 8,
   },
   dateMonth: {
-    fontSize: 11,
+    fontSize: 13,
     color: Colors.muted,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontFamily: Fonts.rounded,
   },
   dateDay: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
     color: Colors.textPrimary,
     fontFamily: Fonts.rounded,
-    lineHeight: 28,
+    lineHeight: 40,
   },
   dateYear: {
-    fontSize: 10,
-    color: Colors.placeholder,
+    fontSize: 12,
+    color: Colors.muted,
     fontWeight: "500",
   },
 
   cardDivider: {
     width: 1,
     backgroundColor: Colors.cardBorder,
-    marginVertical: 12,
+    marginVertical: 10,
   },
 
+  // Center column
   cardCenter: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     justifyContent: "space-between",
-  },
-  regRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginBottom: 4,
-  },
-  regText: {
-    fontSize: 11,
-    color: Colors.muted,
-    fontWeight: "600",
-    letterSpacing: 0.3,
   },
   routeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 8,
+  },
+  routeIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 13,
+    backgroundColor: Colors.yellow,
+    alignItems: "center",
+    justifyContent: "center",
   },
   icao: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "800",
     color: Colors.textPrimary,
     fontFamily: Fonts.rounded,
+    letterSpacing: 0.5,
   },
   routeLineWrap: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
   routeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.muted,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.textPrimary,
   },
   routeLine: {
-    width: 16,
+    flex: 1,
     height: 1.5,
     backgroundColor: Colors.cardBorder,
   },
-  routePlane: { marginHorizontal: 2 },
-  badgeNotesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  routePlane: {
+    position: "absolute",
+    right: "30%",
   },
   typeBadge: {
-    paddingHorizontal: 8,
+    position: "absolute",
+    paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 10,
+    top: 10,
   },
   typeText: {
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
+
+  // Footer row inside center column
+  cardFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    gap: 8,
+  },
   notesText: {
-    fontSize: 10,
+    flex: 1,
+    fontSize: 12,
     color: Colors.muted,
     fontStyle: "italic",
-    flex: 1,
+  },
+  cardFooterDate: {
+    fontSize: 12,
+    color: Colors.muted,
+    fontWeight: "500",
   },
 
+  // Hours column
   cardRight: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    alignItems: "flex-end",
+    width: 60,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    paddingVertical: 12,
   },
   hoursValue: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     color: Colors.textPrimary,
     fontFamily: Fonts.rounded,
-    lineHeight: 26,
+    lineHeight: 36,
   },
   hoursUnit: {
-    fontSize: 11,
+    fontSize: 13,
     color: Colors.muted,
     fontWeight: "600",
-  },
-  cardDateSmall: {
-    fontSize: 9,
-    color: Colors.placeholder,
-    fontWeight: "500",
-    marginTop: 4,
-    textAlign: "right",
+    marginTop: 2,
   },
 
   emptyWrap: {
@@ -611,6 +699,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 10,
+    marginBottom: 30,
     paddingHorizontal: 20,
   },
   addBtn: {
