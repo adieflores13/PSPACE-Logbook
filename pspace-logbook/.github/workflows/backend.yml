@@ -1,0 +1,80 @@
+name: Backend CI + Deploy
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        run: npm install
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Build backend
+        run: npm run build
+
+  backend-deploy:
+    runs-on: ubuntu-latest
+    needs: backend-ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      BACKEND_DATABASE_URL: ${{ secrets.BACKEND_DATABASE_URL }}
+      BACKEND_DEPLOY_WEBHOOK_URL: ${{ secrets.BACKEND_DEPLOY_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        run: npm install
+
+      - name: Run Prisma migrations (optional)
+        if: env.BACKEND_DATABASE_URL != ''
+        run: DATABASE_URL="$BACKEND_DATABASE_URL" npx prisma migrate deploy
+
+      - name: Trigger backend deploy (optional webhook)
+        if: env.BACKEND_DEPLOY_WEBHOOK_URL != ''
+        run: curl -fsSL -X POST "$BACKEND_DEPLOY_WEBHOOK_URL"
+
+      - name: Skip deploy notice
+        if: env.BACKEND_DEPLOY_WEBHOOK_URL == ''
+        run: echo "No BACKEND_DEPLOY_WEBHOOK_URL set. CI completed; deploy step skipped."
