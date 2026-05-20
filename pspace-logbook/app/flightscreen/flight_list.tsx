@@ -293,21 +293,21 @@ export default function FlightListScreen() {
       <ScrollView
         bounces={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom:  0}}
         style={{ backgroundColor: Colors.bodyBackground }}
       >
         {/* ── HERO ── */}
         <View
           style={[
             styles.hero,
-            { minHeight: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 },
+            { paddingTop: insets.top + 10 },
           ]}
         >
           <WorldMapBackdrop />
 
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          {/* <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color={Colors.white} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <Text style={styles.heroTitle}>Flights</Text>
 
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontFamily: Fonts.rounded,
     marginBottom: 16,
-    marginTop: 8,
+
   },
   statsRow: {
     flexDirection: "row",
