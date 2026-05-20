@@ -55,6 +55,18 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    label: "Record",
+    route: "/aircraftrecordscreen/aircraft_record",
+    matchPaths: ["/aircraftrecordscreen/aircraft_record"],
+    icon: (active) => (
+      <MaterialCommunityIcons
+        name={active ? "notebook" : "notebook-outline"}
+        size={22}
+        color={active ? COLORS.amber : COLORS.inactive}
+      />
+    ),
+  },
+  {
     label: "Flights",
     route: "/flightscreen/flight_list",
     matchPaths: ["/flightscreen/flight_list", "/flightscreen/add_flight"],
@@ -66,7 +78,6 @@ const NAV_ITEMS: NavItem[] = [
       />
     ),
   },
-
   {
     label: "Profile",
     route: "/profile",
@@ -109,7 +120,10 @@ function FooterNav() {
             <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
               {item.icon(active)}
             </View>
-            <Text style={[styles.navLabel, active && styles.navLabelActive]}>
+            <Text
+              style={[styles.navLabel, active && styles.navLabelActive]}
+              numberOfLines={1}
+            >
               {item.label}
             </Text>
           </TouchableOpacity>
@@ -151,16 +165,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     paddingTop: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.07,
     shadowRadius: 10,
     elevation: 12,
   },
-  navItem:        { flex: 1, alignItems: "center", gap: 3 },
-  iconWrap:       { width: 44, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 1,
+  },
+  iconWrap: {
+    width: 40,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   iconWrapActive: { backgroundColor: "#FFF4E0" },
-  navLabel:       { fontSize: 10, fontWeight: "500", color: COLORS.inactive, letterSpacing: 0.2 },
+  navLabel: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: COLORS.inactive,
+    letterSpacing: 0.1,
+  },
   navLabelActive: { color: COLORS.amber, fontWeight: "700" },
 });
