@@ -17,6 +17,7 @@ export default function RootLayout() {
           {/* Entry & auth */}
           <Stack.Screen name="index"                              options={{ headerShown: false }} />
           <Stack.Screen name="auth/login"                         options={{ headerShown: false }} />
+          <Stack.Screen name="auth/signup"                        options={{ headerShown: false }} />
 
           {/* Main app screens */}
           <Stack.Screen name="dashboardscreen/dashboard"          options={{ headerShown: false }} />

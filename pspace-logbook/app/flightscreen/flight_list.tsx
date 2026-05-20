@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ScreenLayout from "@/components/layout/screen-layout";
+import Colors from "@/constants/colors";   // ← shared palette
 import { Fonts } from "@/constants/theme";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -27,16 +28,19 @@ const COUNTRY3 = require("../../assets/images/country3.png");
 // ─────────────────────────────────────────────────────────────────────────────
 // SAMPLE DATA
 // ─────────────────────────────────────────────────────────────────────────────
-type FlightType = "Commercial" | "Private" | "Cargo" | "Charter";
+type FlightType = "Commercial" | "Private" | "Cargo";
 
 interface Flight {
   id: string;
   date: string;
+  day: string;
+  month: string;
+  year: string;
   type: FlightType;
-  totalTime: number;        // hours
+  totalTime: number;
   registration: string;
-  departure: string;        // ICAO
-  arrival: string;          // ICAO
+  departure: string;
+  arrival: string;
   notes?: string;
 }
 
@@ -44,6 +48,9 @@ const SAMPLE_FLIGHTS: Flight[] = [
   {
     id: "1",
     date: "Apr 28, 2026",
+    day: "28",
+    month: "Apr",
+    year: "2026",
     type: "Commercial",
     totalTime: 3.5,
     registration: "RP-C3341",
@@ -54,6 +61,9 @@ const SAMPLE_FLIGHTS: Flight[] = [
   {
     id: "2",
     date: "Apr 25, 2026",
+    day: "25",
+    month: "Apr",
+    year: "2026",
     type: "Private",
     totalTime: 1.2,
     registration: "RP-C7812",
@@ -63,16 +73,10 @@ const SAMPLE_FLIGHTS: Flight[] = [
   },
   {
     id: "3",
-    date: "Apr 22, 2026",
-    type: "Charter",
-    totalTime: 5.8,
-    registration: "RP-C1104",
-    departure: "RPLL",
-    arrival: "RPMZ",
-  },
-  {
-    id: "4",
     date: "Apr 18, 2026",
+    day: "18",
+    month: "Apr",
+    year: "2026",
     type: "Cargo",
     totalTime: 2.1,
     registration: "RP-C5506",
@@ -81,8 +85,11 @@ const SAMPLE_FLIGHTS: Flight[] = [
     notes: "Night flight, cargo delivery.",
   },
   {
-    id: "5",
+    id: "4",
     date: "Apr 14, 2026",
+    day: "14",
+    month: "Apr",
+    year: "2026",
     type: "Commercial",
     totalTime: 4.4,
     registration: "RP-C3341",
@@ -90,8 +97,11 @@ const SAMPLE_FLIGHTS: Flight[] = [
     arrival: "RPMD",
   },
   {
-    id: "6",
+    id: "5",
     date: "Apr 10, 2026",
+    day: "10",
+    month: "Apr",
+    year: "2026",
     type: "Private",
     totalTime: 0.9,
     registration: "RP-C9901",
@@ -102,13 +112,13 @@ const SAMPLE_FLIGHTS: Flight[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
+// TYPE META
 // ─────────────────────────────────────────────────────────────────────────────
-const TYPE_META: Record<FlightType, { color: string; bg: string; icon: string }> = {
-  Commercial: { color: "#1A6FD4", bg: "#E8F0FD", icon: "airplane" },
-  Private:    { color: "#2E9E6B", bg: "#E4F7EE", icon: "airplane-outline" },
-  Cargo:      { color: "#C47B12", bg: "#FDF3E0", icon: "cube-outline" },
-  Charter:    { color: "#8B44CC", bg: "#F2E8FC", icon: "star-outline" },
+const TYPE_META: Record<FlightType, { accent: string; bg: string }> = {
+  Commercial: { accent: Colors.commercialAccent, bg: Colors.commercialBg },
+  Private:    { accent: Colors.privateAccent,    bg: Colors.privateBg    },
+
+  Cargo:      { accent: Colors.cargoAccent,      bg: Colors.cargoBg      },
 };
 
 function totalHours(flights: Flight[]) {
@@ -116,21 +126,24 @@ function totalHours(flights: Flight[]) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS
+// WORLD MAP BACKDROP
 // ─────────────────────────────────────────────────────────────────────────────
 function WorldMapBackdrop() {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY1}
-        style={[styles.countryBase, styles.countryAmericas]} />
+        style={[styles.mapBase, styles.mapAmericas]} />
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY2}
-        style={[styles.countryBase, styles.countryEuraf]} />
+        style={[styles.mapBase, styles.mapEuraf]} />
       <Image fadeDuration={0} resizeMode="contain" source={COUNTRY3}
-        style={[styles.countryBase, styles.countryAustralia]} />
+        style={[styles.mapBase, styles.mapAustralia]} />
     </View>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STAT CHIP
+// ─────────────────────────────────────────────────────────────────────────────
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.statChip}>
@@ -140,17 +153,24 @@ function StatChip({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTER PILL
+// ─────────────────────────────────────────────────────────────────────────────
 type FilterType = "All" | FlightType;
-const FILTERS: FilterType[] = ["All", "Commercial", "Private", "Cargo", "Charter"];
+const FILTERS: FilterType[] = ["All", "Commercial", "Private", "Cargo"];
 
-function FilterPill({ label, active, onPress }: { label: FilterType; active: boolean; onPress: () => void }) {
-  const meta = label !== "All" ? TYPE_META[label] : null;
+function FilterPill({
+  label,
+  active,
+  onPress,
+}: {
+  label: FilterType;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
-      style={[
-        styles.pill,
-        active && { backgroundColor: meta ? meta.color : COLORS.navy },
-      ]}
+      style={[styles.pill, active && styles.pillActive]}
       onPress={onPress}
       activeOpacity={0.75}
     >
@@ -161,52 +181,56 @@ function FilterPill({ label, active, onPress }: { label: FilterType; active: boo
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FLIGHT CARD
+// ─────────────────────────────────────────────────────────────────────────────
 function FlightCard({ flight, onPress }: { flight: Flight; onPress: () => void }) {
   const meta = TYPE_META[flight.type];
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.82}>
-      {/* Left accent bar */}
-      <View style={[styles.cardAccent, { backgroundColor: meta.color }]} />
+      <View style={[styles.cardAccent, { backgroundColor: meta.accent }]} />
 
-      <View style={styles.cardInner}>
-        {/* Top row: route + date */}
-        <View style={styles.cardTop}>
-          <View style={styles.routeRow}>
-            <Text style={styles.icao}>{flight.departure}</Text>
-            <View style={styles.routeLineWrap}>
-              <View style={styles.routeDot} />
-              <View style={styles.routeLine} />
-              <Ionicons name="airplane" size={14} color={COLORS.amber} style={styles.routePlane} />
-              <View style={styles.routeLine} />
-              <View style={styles.routeDot} />
-            </View>
-            <Text style={styles.icao}>{flight.arrival}</Text>
-          </View>
-          <Text style={styles.cardDate}>{flight.date}</Text>
+      <View style={styles.dateCol}>
+        <Text style={styles.dateMonth}>{flight.month}</Text>
+        <Text style={styles.dateDay}>{flight.day}</Text>
+        <Text style={styles.dateYear}>{flight.year}</Text>
+      </View>
+
+      <View style={styles.cardDivider} />
+
+      <View style={styles.cardCenter}>
+        <View style={styles.regRow}>
+          <Ionicons name="airplane" size={11} color={Colors.yellow} />
+          <Text style={styles.regText}>{flight.registration}</Text>
         </View>
 
-        {/* Bottom row: reg + type badge + hours */}
-        <View style={styles.cardBottom}>
-          <View style={styles.regWrap}>
-            <Ionicons name="newspaper-outline" size={12} color={COLORS.muted} />
-            <Text style={styles.regText}>{flight.registration}</Text>
+        <View style={styles.routeRow}>
+          <Text style={styles.icao}>{flight.departure}</Text>
+          <View style={styles.routeLineWrap}>
+            <View style={styles.routeDot} />
+            <View style={styles.routeLine} />
+            <Ionicons name="airplane" size={12} color={Colors.yellow} style={styles.routePlane} />
+            <View style={styles.routeLine} />
+            <View style={styles.routeDot} />
           </View>
+          <Text style={styles.icao}>{flight.arrival}</Text>
+        </View>
 
+        <View style={styles.badgeNotesRow}>
           <View style={[styles.typeBadge, { backgroundColor: meta.bg }]}>
-            <Ionicons name={meta.icon as any} size={11} color={meta.color} />
-            <Text style={[styles.typeText, { color: meta.color }]}>{flight.type}</Text>
+            <Text style={[styles.typeText, { color: meta.accent }]}>{flight.type}</Text>
           </View>
-
-          <View style={styles.hoursWrap}>
-            <Ionicons name="time-outline" size={12} color={COLORS.muted} />
-            <Text style={styles.hoursText}>{flight.totalTime.toFixed(1)} hrs</Text>
-          </View>
+          {flight.notes ? (
+            <Text style={styles.notesText} numberOfLines={1}>{flight.notes}</Text>
+          ) : null}
         </View>
+      </View>
 
-        {/* Notes (optional) */}
-        {flight.notes ? (
-          <Text style={styles.notesText} numberOfLines={1}>{flight.notes}</Text>
-        ) : null}
+      <View style={styles.cardRight}>
+        <Text style={styles.hoursValue}>{flight.totalTime.toFixed(1)}</Text>
+        <Text style={styles.hoursUnit}>hrs</Text>
+        <Text style={styles.cardDateSmall}>{flight.date}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -220,30 +244,36 @@ export default function FlightListScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
 
-  const filtered = activeFilter === "All"
-    ? SAMPLE_FLIGHTS
-    : SAMPLE_FLIGHTS.filter(f => f.type === activeFilter);
-
+  const filtered =
+    activeFilter === "All"
+      ? SAMPLE_FLIGHTS
+      : SAMPLE_FLIGHTS.filter((f) => f.type === activeFilter);
+ 
   return (
     <ScreenLayout>
-      <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
 
       <ScrollView
         bounces={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        style={{ backgroundColor: Colors.bodyBackground }}
       >
         {/* ── HERO ── */}
-        <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 }]}>
+        <View
+          style={[
+            styles.hero,
+            { minHeight: HERO_HEIGHT + insets.top, paddingTop: insets.top + 10 },
+          ]}
+        >
           <WorldMapBackdrop />
 
-          <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { top: insets.top + 6 }]}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.navy} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
           </TouchableOpacity>
 
           <Text style={styles.heroTitle}>Flights</Text>
 
-          {/* Stats row */}
           <View style={styles.statsRow}>
             <StatChip label="Total Flights" value={String(SAMPLE_FLIGHTS.length)} />
             <View style={styles.statDivider} />
@@ -255,15 +285,13 @@ export default function FlightListScreen() {
 
         {/* ── BODY ── */}
         <View style={styles.body}>
-
-          {/* Filter pills */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.pillsRow}
             style={styles.pillsScroll}
           >
-            {FILTERS.map(f => (
+            {FILTERS.map((f) => (
               <FilterPill
                 key={f}
                 label={f}
@@ -273,39 +301,31 @@ export default function FlightListScreen() {
             ))}
           </ScrollView>
 
-          {/* Results count */}
           <Text style={styles.resultsCount}>
             {filtered.length} {filtered.length === 1 ? "flight" : "flights"}
           </Text>
 
-          {/* Flight cards */}
           {filtered.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <MaterialCommunityIcons name="airplane-off" size={44} color={COLORS.muted} />
+              <MaterialCommunityIcons name="airplane-off" size={44} color={Colors.muted} />
               <Text style={styles.emptyText}>No flights for this filter</Text>
             </View>
           ) : (
-            filtered.map(flight => (
-              <FlightCard
-                key={flight.id}
-                flight={flight}
-                onPress={() => {
-                  // navigate to detail when you build it:
-                  // router.push(`/flightscreen/${flight.id}`)
-                }}
-              />
+            filtered.map((flight) => (
+              <FlightCard key={flight.id} flight={flight} onPress={() => {}} />
             ))
           )}
 
-          {/* Add button */}
-          <TouchableOpacity
-            style={styles.addBtn}
-            activeOpacity={0.88}
-            onPress={() => router.push("/flightscreen/add_flight")}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addBtnText}>Add Flight</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              activeOpacity={0.88}
+              onPress={() => router.push("/flightscreen/add_flight")}
+            >
+              <Ionicons name="add" size={20} color={Colors.textPrimary} />
+              <Text style={styles.addBtnText}>Add Flight</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </ScreenLayout>
@@ -313,161 +333,308 @@ export default function FlightListScreen() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COLORS
-// ─────────────────────────────────────────────────────────────────────────────
-const COLORS = {
-  amber:   "#F5A623",
-  navy:    "#1A2340",
-  white:   "#FFFFFF",
-  offWhite:"#F4F6FB",
-  muted:   "#9AA3B8",
-  border:  "#E4E8F4",
-  shadow:  "#1A2340",
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // ── Hero ──
   hero: {
-    backgroundColor: "#FFBB57",
-    paddingHorizontal: 24,
+    backgroundColor: Colors.hero,
+    paddingHorizontal: 18,
+    paddingBottom: 28,
     overflow: "hidden",
     justifyContent: "flex-end",
-    paddingBottom: 28,
   },
-  countryBase:      { position: "absolute", opacity: 0.96 },
-  countryAmericas:  { left: -56, top: -2,  width: 194, height: 356, opacity: 0.96 },
-  countryEuraf:     { right: -54, top: -8, width: 372, height: 264, opacity: 0.94 },
-  countryAustralia: { right: 24, top: 206, width: 60,  height: 50,  opacity: 0.96 },
+  mapBase: {
+    position: "absolute",
+    tintColor: Colors.heroMap,
+    opacity: 0.72,
+  },
+  mapAmericas: {
+    left: -84,
+    top: -44,
+    width: 228,
+    height: 418,
+  },
+  mapEuraf: {
+    right: -54,
+    top: -30,
+    width: 378,
+    height: 288,
+  },
+  mapAustralia: {
+    right: 56,
+    top: 224,
+    width: 56,
+    height: 46,
+    opacity: 0.42,
+  },
 
-  backBtn: { position: "absolute", left: 24, padding: 6, zIndex: 10 },
-
+  backBtn: {
+    width: 34,
+    height: 34,
+    justifyContent: "center",
+    marginBottom: 4,
+  },
   heroTitle: {
-    color: COLORS.navy,
-    fontSize: 40,
+    color: Colors.textLight,
+    fontSize: 28,
     fontWeight: "800",
     fontFamily: Fonts.rounded,
-    textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 16,
+    marginTop: 8,
   },
-
   statsRow: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "space-around",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
   },
   statChip:  { alignItems: "center", flex: 1 },
-  statValue: { fontSize: 22, fontWeight: "800", color: COLORS.navy, fontFamily: Fonts.rounded },
-  statLabel: { fontSize: 11, color: COLORS.navy, opacity: 0.65, fontWeight: "500", marginTop: 2 },
-  statDivider: { width: 1, height: 32, backgroundColor: "rgba(26,35,64,0.15)" },
-
-  // ── Body ──
-  body: {
-    backgroundColor: COLORS.offWhite,
-    paddingTop: 20,
-    paddingHorizontal: 16,
+  statValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.white,
+    fontFamily: Fonts.rounded,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "rgba(241,245,251,0.65)",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
 
-  // ── Filter pills ──
-  pillsScroll: { marginBottom: 4 },
+  body: {
+    backgroundColor: Colors.hero,
+    paddingTop: 16,
+    paddingHorizontal: 8,
+  },
+
+  pillsScroll: { marginBottom: 4, paddingHorizontal: 4 },
   pillsRow:    { gap: 8, paddingRight: 8 },
   pill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: Colors.card,
+    borderWidth: 1.4,
+    borderColor: Colors.cardBorder,
   },
-  pillText:       { fontSize: 13, fontWeight: "600", color: COLORS.muted },
-  pillTextActive: { color: COLORS.white },
+  pillActive: {
+    backgroundColor: Colors.yellow,
+    borderColor: Colors.blueStroke,
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.muted,
+    fontFamily: Fonts.rounded,
+  },
+  pillTextActive: {
+    color: Colors.textPrimary,
+  },
 
   resultsCount: {
     fontSize: 12,
-    color: COLORS.muted,
-    fontWeight: "500",
+    color: Colors.muted,
+    fontWeight: "600",
     marginTop: 14,
     marginBottom: 10,
-    marginLeft: 2,
+    marginLeft: 6,
   },
 
-  // ── Flight card ──
   card: {
     flexDirection: "row",
-    backgroundColor: COLORS.white,
+    backgroundColor: Colors.card,
     borderRadius: 18,
     marginBottom: 12,
     overflow: "hidden",
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 7,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: Colors.cardBorder,
+    minHeight: 90,
   },
-  cardAccent: { width: 4, borderRadius: 0 },
-  cardInner:  { flex: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  cardAccent: { width: 5 },
 
-  cardTop: {
-    flexDirection: "row",
+  dateCol: {
+    width: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingLeft: 8,
+  },
+  dateMonth: {
+    fontSize: 11,
+    color: Colors.muted,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  dateDay: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    fontFamily: Fonts.rounded,
+    lineHeight: 28,
+  },
+  dateYear: {
+    fontSize: 10,
+    color: Colors.placeholder,
+    fontWeight: "500",
+  },
+
+  cardDivider: {
+    width: 1,
+    backgroundColor: Colors.cardBorder,
+    marginVertical: 12,
+  },
+
+  cardCenter: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
   },
-  routeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  icao:     { fontSize: 18, fontWeight: "800", color: COLORS.navy, fontFamily: Fonts.rounded },
-  routeLineWrap: { flexDirection: "row", alignItems: "center" },
-  routeDot:  { width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.muted },
-  routeLine: { width: 18, height: 1.5, backgroundColor: COLORS.border },
-  routePlane:{ marginHorizontal: 2 },
-  cardDate:  { fontSize: 12, color: COLORS.muted, fontWeight: "500" },
-
-  cardBottom: {
+  regRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 5,
+    marginBottom: 4,
   },
-  regWrap:  { flexDirection: "row", alignItems: "center", gap: 4 },
-  regText:  { fontSize: 12, color: COLORS.muted, fontWeight: "500" },
-  typeBadge:{
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+  regText: {
+    fontSize: 11,
+    color: Colors.muted,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
-  typeText: { fontSize: 11, fontWeight: "700" },
-  hoursWrap:{ flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
-  hoursText:{ fontSize: 12, color: COLORS.muted, fontWeight: "600" },
-  notesText:{
-    fontSize: 11, color: COLORS.muted, marginTop: 8,
-    fontStyle: "italic", paddingLeft: 2,
-  },
-
-  // ── Empty ──
-  emptyWrap: { alignItems: "center", paddingVertical: 48, gap: 10 },
-  emptyText: { fontSize: 15, color: COLORS.muted, fontWeight: "500" },
-
-  // ── Add button ──
-  addBtn: {
+  routeRow: {
     flexDirection: "row",
-    alignSelf: "center",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  icao: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    fontFamily: Fonts.rounded,
+  },
+  routeLineWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  routeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.muted,
+  },
+  routeLine: {
+    width: 16,
+    height: 1.5,
+    backgroundColor: Colors.cardBorder,
+  },
+  routePlane: { marginHorizontal: 2 },
+  badgeNotesRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.navy,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 28,
-    marginTop: 8,
-    shadowColor: COLORS.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 6,
   },
-  addBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  notesText: {
+    fontSize: 10,
+    color: Colors.muted,
+    fontStyle: "italic",
+    flex: 1,
+  },
+
+  cardRight: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 2,
+  },
+  hoursValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    fontFamily: Fonts.rounded,
+    lineHeight: 26,
+  },
+  hoursUnit: {
+    fontSize: 11,
+    color: Colors.muted,
+    fontWeight: "600",
+  },
+  cardDateSmall: {
+    fontSize: 9,
+    color: Colors.placeholder,
+    fontWeight: "500",
+    marginTop: 4,
+    textAlign: "right",
+  },
+
+  emptyWrap: {
+    alignItems: "center",
+    paddingVertical: 56,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: Colors.muted,
+    fontWeight: "500",
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    maxWidth: 220,
+    height: 62,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.textPrimary,
+    backgroundColor: Colors.yellow,
+    justifyContent: "center",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addBtnText: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "800",
+    fontFamily: Fonts.rounded,
+  },
 });

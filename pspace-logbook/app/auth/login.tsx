@@ -173,7 +173,10 @@ export default function LoginScreen() {
               {/* Create account */}
               <View style={styles.createRow}>
                 <Text style={styles.createText}>New to PSPACE? </Text>
-                <TouchableOpacity activeOpacity={0.7}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => router.push("/auth/signup")}
+                >
                   <Text style={styles.createLink}>Create an Account.</Text>
                 </TouchableOpacity>
               </View>
