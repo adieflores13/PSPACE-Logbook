@@ -1,7 +1,7 @@
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-  Alert,
   Image,
   ScrollView,
   StatusBar,
@@ -35,6 +35,8 @@ const SAMPLE_LOGS: LogbookEntry[] = [
 ];
 
 function LogbookCard({ item }: { item: LogbookEntry }) {
+  const router = useRouter();
+
   return (
     <View style={styles.card}>
       <View style={styles.routeRow}>
@@ -65,7 +67,7 @@ function LogbookCard({ item }: { item: LogbookEntry }) {
 
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => Alert.alert("Flight Details", "Detailed log view will be added next.")}
+        onPress={() => router.push("/flightscreen/flight_details")}
         style={styles.detailsButton}>
         <Text style={styles.detailsButtonText}>View Details</Text>
       </TouchableOpacity>
