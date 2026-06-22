@@ -1,101 +1,399 @@
 // C:\nginx\html\pspace-logbook\pspace-logbook\app\dashboardscreen\dashboard.tsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Animated,
   Easing,
   Image,
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Svg, { Circle } from "react-native-svg";
 import ScreenLayout from "@/components/layout/screen-layout";
 
-// ─── Mock data — swap with real API later ────────────────────────────────────
-const CADET_NAME      = "Juan dela Cruz";
-const NOTIFICATION_COUNT = 3;
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const CADET_NAME = "Cadet Name";
+const NOTIFICATION_COUNT = 1;
 
-const STATS = {
-  timeFilter:    "ALL",
-  aircraftFilter:"ALL",
-  totalHours:    "00:00",
-  takeoffs:      4,
-  landings:      5,
-  nightHours:    "00:00",
-  ifrHours:      "00:00",
-  picHours:      "00:00",
+type Certification = {
+  id: string;
+  title: string;
+  fullName: string;
+  required: number;
+  requiredLabel: string;
+  current: number;
+  remaining: number;
+  unit: string;
+  percentage: number;
 };
+
+const CERTIFICATIONS: Certification[] = [
+  {
+    id: "ppl",
+    title: "PPL(A)",
+    fullName: "Private Pilot License",
+    required: 45,
+    requiredLabel: "Total Hours",
+    current: 40,
+    remaining: 5,
+    unit: "Hours",
+    percentage: 89,
+  },
+  {
+    id: "night",
+    title: "Night Rating",
+    fullName: "Night Rating",
+    required: 5,
+    requiredLabel: "Night Hours",
+    current: 3.5,
+    remaining: 1.5,
+    unit: "Hours",
+    percentage: 70,
+  },
+  {
+    id: "atpl",
+    title: "ATPL (A)",
+    fullName: "Airline Transport Pilot License",
+    required: 1500,
+    requiredLabel: "Total Hours",
+    current: 980,
+    remaining: 520,
+    unit: "Hours",
+    percentage: 65,
+  },
+];
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NAVY  = "#032451";
 const AMBER = "#FFBB57";
 const WHITE = "#FFFFFF";
-const BG    = "#D8DADD";
-const CARD  = "#F1F2F4";
-const MUTED = "#72767D";
-const BORDER= "#D2D6DC";
-const TOP_PANEL = "#E5E7EA";
+const BG    = "#F0F2F5";
+const CARD  = "#FFFFFF";
+const MUTED = "#8A8F9B";
+const BORDER= "#E8EAF0";
 
-// Animated stat card
-function StatCard({
-  label,
-  value,
-  delay = 0,
-  flex = 1,
+// ─── Circular Progress Ring ───────────────────────────────────────────────────
+function CircularProgress({
+  percentage,
+  current,
+  required,
+  unit,
 }: {
-  label: string;
-  value: string | number;
-  delay?: number;
-  flex?: number;
+  percentage: number;
+  current: number;
+  required: number;
+  unit: string;
 }) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const size = 160;
+  const strokeWidth = 12;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (percentage / 100) * circumference;
+
+  const animVal = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 400,
-      delay,
+    Animated.timing(animVal, {
+      toValue: percentage / 100,
+      duration: 900,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, []);
 
+  // We use a static SVG and animate the strokeDashoffset via JS
+  const [dashOffset, setDashOffset] = useState(circumference);
+
+  useEffect(() => {
+    const id = animVal.addListener(({ value }) => {
+      setDashOffset(circumference - value * circumference);
+    });
+    return () => animVal.removeListener(id);
+  }, []);
+
   return (
-    <Animated.View
-      style={[
-        styles.statCard,
-        { flex },
-        {
-          opacity: anim,
-          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-        },
-      ]}
-    >
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </Animated.View>
+    <View style={modalStyles.ringWrap}>
+      <Svg width={size} height={size}>
+        {/* Track */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E8EAF0"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {/* Progress */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={NAVY}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          rotation="-90"
+          origin={`${size / 2}, ${size / 2}`}
+        />
+      </Svg>
+      {/* Center text */}
+      <View style={modalStyles.ringCenter}>
+        <Text style={modalStyles.ringMain}>
+          {current}/{required}
+        </Text>
+        <Text style={modalStyles.ringUnit}>{unit}</Text>
+        <Text style={modalStyles.ringPct}>{percentage}% Complete</Text>
+      </View>
+    </View>
   );
 }
 
+// ─── Detail Modal ─────────────────────────────────────────────────────────────
+function CertModal({
+  item,
+  visible,
+  onClose,
+  onViewLogbook,
+}: {
+  item: Certification | null;
+  visible: boolean;
+  onClose: () => void;
+  onViewLogbook: () => void;
+}) {
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1, duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0, duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      slideAnim.setValue(300);
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!item) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+      {/* Backdrop */}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <Animated.View style={[modalStyles.backdrop, { opacity: fadeAnim }]} />
+      </TouchableWithoutFeedback>
+
+      {/* Sheet */}
+      <Animated.View
+        style={[
+          modalStyles.sheet,
+          { transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        {/* Drag handle */}
+        <View style={modalStyles.handle} />
+
+        {/* Circular progress */}
+        <CircularProgress
+          key={item.id + String(visible)}
+          percentage={item.percentage}
+          current={item.current}
+          required={item.required}
+          unit={item.unit}
+        />
+
+        {/* Stat boxes */}
+        <View style={modalStyles.statRow}>
+          <View style={modalStyles.statBox}>
+            <Text style={modalStyles.statBoxLabel}>Required</Text>
+            <Text style={modalStyles.statBoxValue}>{item.required}</Text>
+            <Text style={modalStyles.statBoxUnit}>{item.requiredLabel}</Text>
+          </View>
+          <View style={modalStyles.statBox}>
+            <Text style={modalStyles.statBoxLabel}>Current</Text>
+            <Text style={modalStyles.statBoxValue}>{item.current}</Text>
+            <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
+          </View>
+          <View style={modalStyles.statBox}>
+            <Text style={modalStyles.statBoxLabel}>Remaining</Text>
+            <Text style={modalStyles.statBoxValue}>{item.remaining}</Text>
+            <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
+          </View>
+        </View>
+
+        {/* Label */}
+        <View style={modalStyles.labelRow}>
+          <Ionicons name="checkmark-circle-outline" size={16} color={MUTED} />
+          <Text style={modalStyles.labelText}>{item.fullName} progress</Text>
+        </View>
+
+        {/* Button */}
+        <TouchableOpacity
+          style={modalStyles.logbookBtn}
+          activeOpacity={0.85}
+          onPress={onViewLogbook}
+        >
+          <Text style={modalStyles.logbookBtnText}>View Logbook</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── Icon per certification ───────────────────────────────────────────────────
+function CertIcon({ id }: { id: string }) {
+  return (
+    <View style={styles.certIconCircle}>
+      {id === "ppl" ? (
+        <FontAwesome5 name="user" size={26} color={WHITE} />
+      ) : id === "night" ? (
+        <MaterialCommunityIcons name="weather-night" size={30} color={WHITE} />
+      ) : (
+        <MaterialCommunityIcons name="airplane" size={30} color={WHITE} />
+      )}
+    </View>
+  );
+}
+
+// ─── Certification Card ───────────────────────────────────────────────────────
+function CertCard({
+  item,
+  delay = 0,
+  onPress,
+}: {
+  item: Certification;
+  delay?: number;
+  onPress: () => void;
+}) {
+  const anim    = useRef(new Animated.Value(0)).current;
+  const barAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(anim, {
+        toValue: 1, duration: 420, delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(barAnim, {
+        toValue: item.percentage / 100, duration: 800, delay: delay + 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
+      <Animated.View
+        style={[
+          styles.certCard,
+          {
+            opacity: anim,
+            transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.certRow}>
+          <CertIcon id={item.id} />
+
+          <View style={styles.certInfo}>
+            <Text style={styles.certTitle}>{item.title}</Text>
+            <View style={styles.certDetails}>
+              <View style={styles.certDetailRow}>
+                <Text style={styles.certDetailLabel}>Required:</Text>
+                <Text style={styles.certDetailValue}>{item.required} {item.requiredLabel}</Text>
+              </View>
+              <View style={styles.certDetailRow}>
+                <Text style={styles.certDetailLabel}>Current:</Text>
+                <Text style={styles.certDetailValue}>{item.current} {item.unit}</Text>
+              </View>
+              <View style={styles.certDetailRow}>
+                <Text style={styles.certDetailLabel}>Remaining:</Text>
+                <Text style={styles.certDetailValue}>{item.remaining} {item.unit}</Text>
+              </View>
+            </View>
+          </View>
+
+          <Text style={styles.certPct}>{item.percentage}%</Text>
+        </View>
+
+        <View style={styles.progressTrack}>
+          <Animated.View
+            style={[
+              styles.progressFill,
+              {
+                width: barAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"],
+                }),
+              },
+            ]}
+          />
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Bottom Nav Item ──────────────────────────────────────────────────────────
+function NavItem({
+  icon, label, active = false, onPress,
+}: {
+  icon: string; label: string; active?: boolean; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={onPress}>
+      <Ionicons name={icon as any} size={22} color={active ? NAVY : MUTED} />
+      <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Header fade-in
-  const headerAnim = useRef(new Animated.Value(0)).current;
+  const [selectedCert, setSelectedCert] = useState<Certification | null>(null);
+  const [modalVisible, setModalVisible]  = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 500,
+    Animated.timing(fadeAnim, {
+      toValue: 1, duration: 500,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
   }, []);
+
+  function openModal(cert: Certification) {
+    setSelectedCert(cert);
+    setModalVisible(true);
+  }
+
+  function closeModal() {
+    setModalVisible(false);
+  }
 
   return (
     <ScreenLayout>
@@ -103,41 +401,47 @@ export default function DashboardScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Top Logo Bar ── */}
-        <View className="" style={[styles.logoBar, { paddingTop: insets.top + 8 }]}>
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+            <Ionicons name="menu" size={26} color={NAVY} />
+          </TouchableOpacity>
           <Image
             source={require("@/assets/images/logo-with-map.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />
+          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+            <Ionicons name="notifications-outline" size={24} color={NAVY} />
+            {NOTIFICATION_COUNT > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
+        {/* ── Dashboard Title ── */}
+        <Animated.View style={[styles.titleBlock, { opacity: fadeAnim }]}>
+          <Text style={styles.dashTitle}>DASHBOARD</Text>
+          <Text style={styles.dashSubtitle}>
+            View schedules, aircraft status, and live aviation data at a glance.
+          </Text>
+        </Animated.View>
+
         {/* ── Welcome Banner ── */}
-        <Animated.View
-          style={[
-            styles.banner,
-            {
-              opacity: headerAnim,
-              transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }],
-            },
-          ]}
-        >
-          {/* Avatar */}
-          <View style={styles.avatarWrap}>
-            <FontAwesome5 name="user-astronaut" size={22} color={AMBER} />
+        <Animated.View style={[styles.welcomeBanner, { opacity: fadeAnim }]}>
+          <View style={styles.avatarCircle}>
+            <FontAwesome5 name="user" size={18} color={NAVY} />
           </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.welcomeText}>Welcome,</Text>
-            <Text style={styles.cadetName}>{CADET_NAME}!</Text>
-          </View>
-
-          {/* Notification bell */}
-          <TouchableOpacity style={styles.bellWrap} activeOpacity={0.7}>
-            <Ionicons name="notifications-outline" size={22} color={WHITE} />
+          <Text style={styles.welcomeText}>
+            Welcome, <Text style={styles.welcomeName}>({CADET_NAME})!</Text>
+          </Text>
+          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+            <Ionicons name="notifications-outline" size={22} color={NAVY} />
             {NOTIFICATION_COUNT > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
@@ -146,309 +450,197 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Dashboard Title ── */}
-        <Animated.View
-          style={[
-            styles.titleBlock,
-            {
-              opacity: headerAnim,
-              transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
-            },
-          ]}
-        >
-          <Text style={styles.dashTitle}>DASHBOARD</Text>
-          <Text style={styles.dashSubtitle}>
-            View schedules, aircraft status, and live aviation data at a glance.
-          </Text>
-        </Animated.View>
-
-        {/* ── Filter Row: Time | Clock Icon | Aircraft ── */}
-        <View style={styles.filterCard}>
-          <View style={styles.filterSide}>
-            <Text style={styles.filterLabel}>Time:</Text>
-            <Text style={styles.filterValue}>{STATS.timeFilter}</Text>
-          </View>
-
-          <View style={styles.filterDivider} />
-
-          <View style={styles.clockCircle}>
-            <Ionicons name="time-outline" size={32} color={NAVY} />
-          </View>
-
-          <View style={styles.filterDivider} />
-
-          <View style={styles.filterSide}>
-            <Text style={styles.filterLabel}>Aircraft:</Text>
-            <Text style={styles.filterValue}>{STATS.aircraftFilter}</Text>
-          </View>
-        </View>
-
-        {/* ── Stats Grid ── */}
-
-        {/* Row 1: Total Hours | Takeoffs */}
-        <View style={styles.statsRow}>
-          <StatCard label="Total Hours:" value={STATS.totalHours} delay={80} />
-          <StatCard label="Takeoffs:" value={STATS.takeoffs} delay={130} />
-        </View>
-
-        {/* Row 2: Landings | Night Hours */}
-        <View style={styles.statsRow}>
-          <StatCard label="Landings:" value={STATS.landings} delay={180} />
-          <StatCard label="Night hours:" value={STATS.nightHours} delay={230} />
-        </View>
-
-        {/* Row 3: IFR Hours | PIC Hours */}
-        <View style={styles.statsRow}>
-          <StatCard label="IFR Hours:" value={STATS.ifrHours} delay={280} />
-          <StatCard label="PIC hours:" value={STATS.picHours} delay={330} />
-        </View>
-
-        {/* ── Action Buttons ── */}
-        <View style={styles.actionRow}>
-          {/* <TouchableOpacity
-            style={styles.actionBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push("/logbook")}
-          >
-            <Text style={styles.actionBtnText}>View and Manage Logbook</Text>
-          </TouchableOpacity> */}
-
-          <TouchableOpacity
-            style={styles.actionBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push("/flightscreen/add_flight")}
-          >
-            <Text style={styles.actionBtnText}>Add Logbook Entry</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push("/aircraftscreen/aircraft_list")}
-          >
-            <Text style={styles.actionBtnText}>View and Manage Aircraft</Text>
-          </TouchableOpacity>
+        {/* ── Certification Cards ── */}
+        <View style={styles.cardsWrap}>
+          {CERTIFICATIONS.map((item, i) => (
+            <CertCard
+              key={item.id}
+              item={item}
+              delay={i * 100 + 100}
+              onPress={() => openModal(item)}
+            />
+          ))}
         </View>
 
         <View style={{ height: 16 }} />
       </ScrollView>
+
+      {/* ── Bottom Navigation ── */}
+      <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 6 }]}>
+        <NavItem icon="airplane"    label="Dashboard" active onPress={() => {}} />
+        <NavItem icon="business"    label="Airports"  onPress={() => {}} />
+        <NavItem icon="paper-plane" label="Flights"   onPress={() => router.push("/flightscreen/add_flight")} />
+        <NavItem icon="book"        label="Logbook"   onPress={() => {}} />
+        <NavItem icon="person"      label="Profile"   onPress={() => {}} />
+      </View>
+
+      {/* ── Detail Modal ── */}
+      <CertModal
+        item={selectedCert}
+        visible={modalVisible}
+        onClose={closeModal}
+        onViewLogbook={() => {
+          closeModal();
+          router.push("/logbook");
+        }}
+      />
     </ScreenLayout>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   scroll:        { flex: 1, backgroundColor: BG },
-  scrollContent: { paddingHorizontal: 0, paddingBottom: 12 },
+  scrollContent: { paddingBottom: 8 },
 
-  // ── Logo bar ────────────────────────────────────────────────────────────────
-  logoBar: {
+  header: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    height: 176,
-    backgroundColor: TOP_PANEL,
+    justifyContent: "space-between",
+    backgroundColor: WHITE,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-
-  logoImage: {
-    width: 126,
-    height: 86,
-    marginTop: 12,
-  },
-
-  // ── Banner ───────────────────────────────────────────────────────────────────
-  banner: {
-    backgroundColor: NAVY,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    gap: 12,
-  },
-
-  avatarWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 2,
-    borderColor: AMBER,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  welcomeText: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
-    fontWeight: "500",
-  },
-
-  cadetName: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: WHITE,
-    letterSpacing: 0.3,
-  },
-
-  bellWrap: { position: "relative", padding: 4 },
-
+  headerBtn: { padding: 4, position: "relative", width: 36, alignItems: "center" },
+  logoImage:  { width: 80, height: 40 },
   badge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: AMBER,
-    alignItems: "center",
-    justifyContent: "center",
+    position: "absolute", top: 0, right: 0,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: AMBER, alignItems: "center", justifyContent: "center",
   },
+  badgeText: { fontSize: 8, fontWeight: "800", color: WHITE },
 
-  badgeText: { fontSize: 9, fontWeight: "800", color: WHITE },
-
-  // ── Title block ──────────────────────────────────────────────────────────────
   titleBlock: {
-    backgroundColor: NAVY,
-    paddingHorizontal: 18,
-    paddingBottom: 22,
+    backgroundColor: WHITE,
     alignItems: "center",
+    paddingTop: 20, paddingBottom: 14, paddingHorizontal: 20,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
   },
+  dashTitle:    { fontSize: 30, fontWeight: "900", color: NAVY, letterSpacing: 4 },
+  dashSubtitle: { fontSize: 11, color: MUTED, textAlign: "center", marginTop: 4 },
 
-  dashTitle: {
-    fontSize: 30,
-    fontWeight: "900",
-    color: AMBER,
-    letterSpacing: 3,
-    textAlign: "center",
-  },
-
-  dashSubtitle: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
-    textAlign: "center",
-    marginTop: 4,
-    letterSpacing: 0.2,
-  },
-
-  // ── Filter card ──────────────────────────────────────────────────────────────
-  filterCard: {
+  welcomeBanner: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: WHITE,
+    paddingHorizontal: 16, paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+    marginBottom: 4,
+  },
+  avatarCircle: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: BG,
+    borderWidth: 2, borderColor: BORDER,
+    alignItems: "center", justifyContent: "center",
+  },
+  welcomeText: { flex: 1, fontSize: 13, color: MUTED, fontWeight: "500" },
+  welcomeName: { color: NAVY, fontWeight: "700" },
+
+  cardsWrap: { paddingHorizontal: 14, paddingTop: 10, gap: 10 },
+
+  certCard: {
     backgroundColor: CARD,
-    marginHorizontal: 16,
-    marginTop: 18,
     borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    shadowColor: NAVY,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 4,
+    paddingTop: 16, paddingHorizontal: 16, paddingBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+  },
+  certRow:    { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
+  certIconCircle: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: NAVY,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  certInfo:   { flex: 1 },
+  certTitle:  { fontSize: 15, fontWeight: "800", color: NAVY, marginBottom: 5 },
+  certDetails:{ gap: 2 },
+  certDetailRow: { flexDirection: "row", gap: 6 },
+  certDetailLabel: { fontSize: 11, color: MUTED, width: 68 },
+  certDetailValue: { fontSize: 11, color: NAVY, fontWeight: "600" },
+  certPct:    { fontSize: 26, fontWeight: "900", color: NAVY, minWidth: 52, textAlign: "right", flexShrink: 0 },
+  progressTrack: { height: 7, backgroundColor: "#D8DBE8", borderRadius: 4, overflow: "hidden" },
+  progressFill:  { height: 7, borderRadius: 4, backgroundColor: NAVY },
+
+  bottomNav: {
+    flexDirection: "row",
+    backgroundColor: WHITE,
+    borderTopWidth: 1, borderTopColor: BORDER,
+    paddingTop: 10,
+  },
+  navItem:       { flex: 1, alignItems: "center", gap: 3 },
+  navLabel:      { fontSize: 10, color: MUTED, fontWeight: "500" },
+  navLabelActive:{ color: NAVY, fontWeight: "700" },
+});
+
+// ─── Modal Styles ─────────────────────────────────────────────────────────────
+const modalStyles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  sheet: {
+    position: "absolute",
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  handle: {
+    width: 40, height: 4,
+    backgroundColor: "#D0D3DC",
+    borderRadius: 2,
+    marginBottom: 24,
+  },
+
+  // Ring
+  ringWrap: { width: 160, height: 160, alignItems: "center", justifyContent: "center", marginBottom: 28 },
+  ringCenter: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  ringMain: { fontSize: 24, fontWeight: "900", color: NAVY },
+  ringUnit: { fontSize: 13, color: MUTED, marginTop: 2 },
+  ringPct:  { fontSize: 11, color: MUTED, marginTop: 2 },
+
+  // Stat boxes
+  statRow: { flexDirection: "row", gap: 10, marginBottom: 20, width: "100%" },
+  statBox: {
+    flex: 1,
+    backgroundColor: BG,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
     borderWidth: 1,
     borderColor: BORDER,
   },
+  statBoxLabel: { fontSize: 11, color: MUTED, fontWeight: "600", marginBottom: 6 },
+  statBoxValue: { fontSize: 24, fontWeight: "900", color: NAVY },
+  statBoxUnit:  { fontSize: 10, color: MUTED, marginTop: 4 },
 
-  filterSide: {
-    flex: 1,
-    alignItems: "center",
-  },
+  // Label
+  labelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 24 },
+  labelText:{ fontSize: 12, color: MUTED },
 
-  filterLabel: {
-    fontSize: 11,
-    color: MUTED,
-    fontWeight: "500",
-    letterSpacing: 0.3,
-  },
-
-  filterValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: NAVY,
-    marginTop: 2,
-    letterSpacing: 1,
-  },
-
-  filterDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: BORDER,
-    marginHorizontal: 10,
-  },
-
-  clockCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: NAVY,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: WHITE,
-  },
-
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  statsRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 12,
-    gap: 12,
-  },
-
-  statCard: {
-    backgroundColor: CARD,
+  // Button
+  logbookBtn: {
+    width: "100%",
+    backgroundColor: AMBER,
     borderRadius: 14,
     paddingVertical: 16,
-    paddingHorizontal: 18,
-    shadowColor: NAVY,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  statLabel: {
-    fontSize: 11,
-    color: MUTED,
-    fontWeight: "500",
-    letterSpacing: 0.3,
-  },
-
-  statValue: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: NAVY,
-    marginTop: 3,
-    letterSpacing: 0.5,
-  },
-
-  // ── Action buttons ───────────────────────────────────────────────────────────
-  actionRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 18,
-    gap: 8,
-    flexWrap: "nowrap",
-  },
-
-  actionBtn: {
-    flex: 1,
-    backgroundColor: NAVY,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
     alignItems: "center",
-    justifyContent: "center",
   },
-
-  actionBtnText: {
-    fontSize: 9.5,
-    fontWeight: "700",
-    color: WHITE,
-    textAlign: "center",
-    letterSpacing: 0.2,
-    lineHeight: 13,
-  },
+  logbookBtnText: { fontSize: 15, fontWeight: "800", color: NAVY },
 });
