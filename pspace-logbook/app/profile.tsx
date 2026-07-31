@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -9,28 +10,85 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 
 import ScreenLayout from "@/components/layout/screen-layout";
+
+// ─── Illustrated avatar (matches the cartoon-style placeholder in the design) ──
+function CadetAvatar({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Circle cx="50" cy="50" r="50" fill="#DCE6F0" />
+      <Ellipse cx="50" cy="58" rx="26" ry="28" fill="#F0B088" />
+      <Path
+        d="M22 46 C22 20, 78 20, 78 46 C78 32, 66 24, 50 24 C34 24, 22 32, 22 46 Z"
+        fill="#2B2118"
+      />
+      <Path
+        d="M24 44 C20 54, 22 66, 30 72 C26 62, 27 50, 30 44 Z"
+        fill="#2B2118"
+      />
+      <Path
+        d="M76 44 C80 54, 78 66, 70 72 C74 62, 73 50, 70 44 Z"
+        fill="#2B2118"
+      />
+      <Path
+        d="M34 74 C40 82, 60 82, 66 74 C64 66, 58 62, 50 62 C42 62, 36 66, 34 74 Z"
+        fill="#8B5A2B"
+      />
+    </Svg>
+  );
+}
+
+const NAVY     = "#1A2340";
+const WHITE    = "#FFFFFF";
+const BG       = "#F7F8FC";
+const MUTED    = "#5E6983";
+const BORDER   = "#E8ECF4";
+const DISABLED = "#B7BECF";
 
 type UserProfile = {
   profileImage: string | null;
   fullName: string;
   email: string;
   dateOfBirth: string;
+  studentId: string;
+  academy: string;
+};
+
+// Mock stats — matches the flight-hours mock data used elsewhere in the app.
+const STATS = {
+  hours: "68:25",
+  flights: 42,
+  rating: "89%",
+  ratingLabel: "PPL",
+};
+
+type MenuItem = {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress?: () => void;
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [profile, setProfile] = useState<UserProfile>({
     profileImage: null,
-    fullName: "John Doe",
+    fullName: "Cadet Name",
     email: "john.doe@example.com",
     dateOfBirth: "1995-06-15",
+    studentId: "CD-10284",
+    academy: "Centennial Flight Academy",
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -88,58 +146,85 @@ export default function ProfileScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Not set";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const MENU_ITEMS: MenuItem[] = [
+    { label: "Personal Information", icon: "person-outline", onPress: openEditModal },
+    { label: "Documents & Certificates", icon: "clipboard-outline" },
+    { label: "Schools & Instructors", icon: "person-outline" },
+    { label: "Flight Preference", icon: "layers-outline" },
+    { label: "Notifications", icon: "notifications-outline" },
+    { label: "Security & Privacy", icon: "clipboard-outline" },
+  ];
 
   return (
     <ScreenLayout>
+      <StatusBar backgroundColor={WHITE} barStyle="dark-content" />
+
+      {/* ── Header ── */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+          <Ionicons color={NAVY} name="chevron-back" size={24} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={styles.backBtn} />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.screen}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
-          {/* Profile Image */}
-          <View style={styles.avatarContainer}>
-            {profile.profileImage ? (
-              <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons color="#1A2340" name="person" size={64} />
-              </View>
-            )}
+        {/* ── Profile card ── */}
+        <TouchableOpacity style={styles.profileCard} activeOpacity={0.8} onPress={openEditModal}>
+          {profile.profileImage ? (
+            <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarClip}>
+              <CadetAvatar size={52} />
+            </View>
+          )}
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName} numberOfLines={1}>{profile.fullName}</Text>
+            <Text style={styles.profileMeta} numberOfLines={1}>Student Pilot · {profile.studentId}</Text>
+            <Text style={styles.profileMeta} numberOfLines={1}>{profile.academy}</Text>
           </View>
+          <Ionicons color={MUTED} name="chevron-forward" size={20} />
+        </TouchableOpacity>
 
-          <Text style={styles.title}>{profile.fullName}</Text>
-          <Text style={styles.subtitle}>{profile.email}</Text>
-
-          {/* Profile Details */}
-          <View style={styles.detailsContainer}>
-            <DetailRow
-              icon="person-outline"
-              label="Full Name"
-              value={profile.fullName}
-            />
-            <DetailRow icon="mail-outline" label="Email" value={profile.email} />
-            <DetailRow
-              icon="calendar-outline"
-              label="Date of Birth"
-              value={formatDate(profile.dateOfBirth)}
-            />
+        {/* ── Stats ── */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{STATS.hours}</Text>
+            <Text style={styles.statLabel}>Hours</Text>
           </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{STATS.flights}</Text>
+            <Text style={styles.statLabel}>Flights</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{STATS.rating}</Text>
+            <Text style={styles.statLabel}>{STATS.ratingLabel}</Text>
+          </View>
+        </View>
 
-          {/* Edit Button */}
-          <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
-            <Ionicons color="#FFFFFF" name="create-outline" size={18} />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+        {/* ── Menu list ── */}
+        <View style={styles.menuList}>
+          {MENU_ITEMS.map((item) => {
+            const enabled = !!item.onPress;
+            return (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.menuRow}
+                activeOpacity={enabled ? 0.7 : 1}
+                disabled={!enabled}
+                onPress={item.onPress}
+              >
+                <Ionicons color={enabled ? NAVY : DISABLED} name={item.icon} size={20} />
+                <Text style={[styles.menuLabel, !enabled && styles.menuLabelDisabled]}>
+                  {item.label}
+                </Text>
+                <Ionicons color={enabled ? MUTED : DISABLED} name="chevron-forward" size={18} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -162,7 +247,7 @@ export default function ProfileScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Profile</Text>
                 <Pressable onPress={closeEditModal} hitSlop={10}>
-                  <Ionicons color="#1A2340" name="close" size={26} />
+                  <Ionicons color={NAVY} name="close" size={26} />
                 </Pressable>
               </View>
 
@@ -178,11 +263,11 @@ export default function ProfileScreen() {
                   />
                 ) : (
                   <View style={styles.avatarPlaceholderEdit}>
-                    <Ionicons color="#1A2340" name="person" size={50} />
+                    <CadetAvatar size={100} />
                   </View>
                 )}
                 <View style={styles.cameraBadge}>
-                  <Ionicons color="#FFFFFF" name="camera" size={16} />
+                  <Ionicons color={WHITE} name="camera" size={16} />
                 </View>
               </TouchableOpacity>
               <Text style={styles.changePhotoText}>Tap to change photo</Text>
@@ -240,29 +325,6 @@ export default function ProfileScreen() {
   );
 }
 
-// Sub-component for showing each detail row
-function DetailRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.detailRow}>
-      <View style={styles.detailIcon}>
-        <Ionicons color="#1A2340" name={icon} size={20} />
-      </View>
-      <View style={styles.detailTextContainer}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
 // Sub-component for form input fields
 function FormField({
   label,
@@ -296,109 +358,88 @@ function FormField({
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: WHITE,
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+  },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: NAVY },
+
   screen: {
     flexGrow: 1,
-    backgroundColor: "#F7F8FC",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
+    backgroundColor: BG,
+    padding: 16,
+    paddingBottom: 24,
   },
-  card: {
-    width: "100%",
-    maxWidth: 360,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: WHITE,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8ECF4",
-    paddingVertical: 28,
-    paddingHorizontal: 22,
-    alignItems: "center",
-    shadowColor: "#1A2340",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  avatarContainer: {
-    marginBottom: 12,
+    borderColor: BORDER,
+    padding: 14,
+    gap: 12,
   },
   avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: "#E8ECF4",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: BORDER,
   },
-  avatarPlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "#E8ECF4",
-    alignItems: "center",
-    justifyContent: "center",
+  avatarClip: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: "hidden",
   },
-  title: {
-    marginTop: 6,
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#1A2340",
-  },
-  subtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: "#5E6983",
-  },
-  detailsContainer: {
-    width: "100%",
-    marginTop: 22,
-    gap: 14,
-  },
-  detailRow: {
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 16, fontWeight: "800", color: NAVY, marginBottom: 2 },
+  profileMeta: { fontSize: 12, color: MUTED },
+
+  statsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F7F8FC",
-    padding: 12,
-    borderRadius: 12,
+    gap: 10,
+    marginTop: 14,
   },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E8ECF4",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  detailTextContainer: {
+  statBox: {
     flex: 1,
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingVertical: 14,
+    alignItems: "center",
   },
-  detailLabel: {
-    fontSize: 12,
-    color: "#5E6983",
-    marginBottom: 2,
+  statValue: { fontSize: 18, fontWeight: "900", color: NAVY },
+  statLabel: { fontSize: 11, color: MUTED, marginTop: 4 },
+
+  menuList: {
+    marginTop: 18,
+    gap: 10,
   },
-  detailValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A2340",
-  },
-  editButton: {
-    marginTop: 24,
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1A2340",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    gap: 8,
-    width: "100%",
+    gap: 12,
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
-  editButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 15,
-  },
+  menuLabel: { flex: 1, fontSize: 14, fontWeight: "600", color: NAVY },
+  menuLabelDisabled: { color: DISABLED },
+
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -406,7 +447,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: WHITE,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "90%",
@@ -423,7 +464,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#1A2340",
+    color: NAVY,
   },
   imagePickerContainer: {
     alignSelf: "center",
@@ -435,13 +476,13 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#E8ECF4",
+    borderColor: BORDER,
   },
   avatarPlaceholderEdit: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#E8ECF4",
+    backgroundColor: BG,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -449,21 +490,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#1A2340",
+    backgroundColor: NAVY,
     width: 30,
     height: 30,
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: WHITE,
   },
   changePhotoText: {
     alignSelf: "center",
     marginTop: 8,
     marginBottom: 18,
     fontSize: 13,
-    color: "#5E6983",
+    color: MUTED,
   },
   formField: {
     marginBottom: 16,
@@ -471,18 +512,18 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#5E6983",
+    color: MUTED,
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#E8ECF4",
+    borderColor: BORDER,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: "#1A2340",
-    backgroundColor: "#F7F8FC",
+    color: NAVY,
+    backgroundColor: BG,
   },
   buttonRow: {
     flexDirection: "row",
@@ -496,20 +537,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#F7F8FC",
+    backgroundColor: BG,
     borderWidth: 1,
-    borderColor: "#E8ECF4",
+    borderColor: BORDER,
   },
   cancelButtonText: {
-    color: "#5E6983",
+    color: MUTED,
     fontWeight: "700",
     fontSize: 15,
   },
   saveButton: {
-    backgroundColor: "#1A2340",
+    backgroundColor: NAVY,
   },
   saveButtonText: {
-    color: "#FFFFFF",
+    color: WHITE,
     fontWeight: "700",
     fontSize: 15,
   },

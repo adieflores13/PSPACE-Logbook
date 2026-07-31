@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 import ScreenLayout from "@/components/layout/screen-layout";
+import Sidebar from "@/components/layout/sidebar";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const CADET_NAME = "Cadet Name";
@@ -376,6 +377,7 @@ export default function DashboardScreen() {
 
   const [selectedCert, setSelectedCert] = useState<Certification | null>(null);
   const [modalVisible, setModalVisible]  = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -406,7 +408,7 @@ export default function DashboardScreen() {
       >
         {/* ── Header ── */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7} onPress={() => setSidebarVisible(true)}>
             <Ionicons name="menu" size={26} color={NAVY} />
           </TouchableOpacity>
           <Image
@@ -473,6 +475,9 @@ export default function DashboardScreen() {
         <NavItem icon="book"        label="Logbook"   onPress={() => {}} />
         <NavItem icon="person"      label="Profile"   onPress={() => {}} />
       </View>
+
+      {/* ── Sidebar ── */}
+      <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
 
       {/* ── Detail Modal ── */}
       <CertModal
