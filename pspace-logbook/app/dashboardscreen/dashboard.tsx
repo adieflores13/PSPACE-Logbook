@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,6 +18,7 @@ import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 import ScreenLayout from "@/components/layout/screen-layout";
 import Sidebar from "@/components/layout/sidebar";
+import FiveIconNav from "@/components/layout/five-icon-nav";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const CADET_NAME = "Cadet Name";
@@ -34,6 +34,8 @@ type Certification = {
   remaining: number;
   unit: string;
   percentage: number;
+  progressLabel: string;
+  actionLabel: string;
 };
 
 const CERTIFICATIONS: Certification[] = [
@@ -47,6 +49,8 @@ const CERTIFICATIONS: Certification[] = [
     remaining: 5,
     unit: "Hours",
     percentage: 89,
+    progressLabel: "Private Pilot License progress",
+    actionLabel: "View Logbook",
   },
   {
     id: "night",
@@ -58,6 +62,8 @@ const CERTIFICATIONS: Certification[] = [
     remaining: 1.5,
     unit: "Hours",
     percentage: 70,
+    progressLabel: "Night flying requirement",
+    actionLabel: "Add Night Flight",
   },
   {
     id: "atpl",
@@ -69,6 +75,8 @@ const CERTIFICATIONS: Certification[] = [
     remaining: 520,
     unit: "Hours",
     percentage: 65,
+    progressLabel: "Airline Transport Pilot License progress",
+    actionLabel: "View Logbook",
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,21 +91,22 @@ const BORDER= "#E8EAF0";
 
 // ─── Circular Progress Ring ───────────────────────────────────────────────────
 function CircularProgress({
+  id,
   percentage,
   current,
   required,
   unit,
 }: {
+  id: string;
   percentage: number;
   current: number;
   required: number;
   unit: string;
 }) {
-  const size = 160;
-  const strokeWidth = 12;
+  const size = 190;
+  const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = (percentage / 100) * circumference;
 
   const animVal = useRef(new Animated.Value(0)).current;
 
@@ -149,6 +158,9 @@ function CircularProgress({
       </Svg>
       {/* Center text */}
       <View style={modalStyles.ringCenter}>
+        {id === "night" && (
+          <MaterialCommunityIcons name="weather-night" size={32} color={NAVY} />
+        )}
         <Text style={modalStyles.ringMain}>
           {current}/{required}
         </Text>
@@ -164,97 +176,94 @@ function CertModal({
   item,
   visible,
   onClose,
-  onViewLogbook,
+  onAction,
 }: {
   item: Certification | null;
   visible: boolean;
   onClose: () => void;
-  onViewLogbook: () => void;
+  onAction: (item: Certification) => void;
 }) {
-  const slideAnim = useRef(new Animated.Value(300)).current;
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(700)).current;
 
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1, duration: 250,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0, duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     } else {
-      slideAnim.setValue(300);
-      fadeAnim.setValue(0);
+      slideAnim.setValue(700);
     }
   }, [visible]);
 
   if (!item) return null;
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
-      {/* Backdrop */}
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[modalStyles.backdrop, { opacity: fadeAnim }]} />
-      </TouchableWithoutFeedback>
-
-      {/* Sheet */}
+    <Modal visible={visible} animationType="none" onRequestClose={onClose}>
+      <StatusBar backgroundColor={WHITE} barStyle="dark-content" translucent={false} />
       <Animated.View
         style={[
-          modalStyles.sheet,
+          modalStyles.fullScreen,
           { transform: [{ translateY: slideAnim }] },
         ]}
       >
-        {/* Drag handle */}
-        <View style={modalStyles.handle} />
-
-        {/* Circular progress */}
-        <CircularProgress
-          key={item.id + String(visible)}
-          percentage={item.percentage}
-          current={item.current}
-          required={item.required}
-          unit={item.unit}
-        />
-
-        {/* Stat boxes */}
-        <View style={modalStyles.statRow}>
-          <View style={modalStyles.statBox}>
-            <Text style={modalStyles.statBoxLabel}>Required</Text>
-            <Text style={modalStyles.statBoxValue}>{item.required}</Text>
-            <Text style={modalStyles.statBoxUnit}>{item.requiredLabel}</Text>
-          </View>
-          <View style={modalStyles.statBox}>
-            <Text style={modalStyles.statBoxLabel}>Current</Text>
-            <Text style={modalStyles.statBoxValue}>{item.current}</Text>
-            <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
-          </View>
-          <View style={modalStyles.statBox}>
-            <Text style={modalStyles.statBoxLabel}>Remaining</Text>
-            <Text style={modalStyles.statBoxValue}>{item.remaining}</Text>
-            <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
-          </View>
+        <View style={[modalStyles.modalHeader, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity onPress={onClose} style={modalStyles.backButton} hitSlop={10}>
+            <Ionicons name="arrow-back" size={24} color={NAVY} />
+          </TouchableOpacity>
+          <Text style={modalStyles.modalTitle}>{item.title} Progress</Text>
+          <View style={modalStyles.headerSpacer} />
         </View>
 
-        {/* Label */}
-        <View style={modalStyles.labelRow}>
-          <Ionicons name="checkmark-circle-outline" size={16} color={MUTED} />
-          <Text style={modalStyles.labelText}>{item.fullName} progress</Text>
-        </View>
-
-        {/* Button */}
-        <TouchableOpacity
-          style={modalStyles.logbookBtn}
-          activeOpacity={0.85}
-          onPress={onViewLogbook}
+        <ScrollView
+          contentContainerStyle={modalStyles.modalContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={modalStyles.logbookBtnText}>View Logbook</Text>
-        </TouchableOpacity>
+          <CircularProgress
+            key={item.id + String(visible)}
+            id={item.id}
+            percentage={item.percentage}
+            current={item.current}
+            required={item.required}
+            unit={item.unit}
+          />
+
+          <View style={modalStyles.statRow}>
+            <View style={modalStyles.statBox}>
+              <Text style={modalStyles.statBoxLabel}>Required</Text>
+              <Text style={modalStyles.statBoxValue}>{item.required}</Text>
+              <Text style={modalStyles.statBoxUnit}>{item.requiredLabel}</Text>
+            </View>
+            <View style={modalStyles.statBox}>
+              <Text style={modalStyles.statBoxLabel}>Current</Text>
+              <Text style={modalStyles.statBoxValue}>{item.current}</Text>
+              <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
+            </View>
+            <View style={modalStyles.statBox}>
+              <Text style={modalStyles.statBoxLabel}>Remaining</Text>
+              <Text style={modalStyles.statBoxValue}>{item.remaining}</Text>
+              <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
+            </View>
+          </View>
+
+          <View style={modalStyles.labelRow}>
+            <Ionicons name="checkmark-circle-outline" size={18} color={NAVY} />
+            <Text style={modalStyles.labelText}>{item.progressLabel}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={modalStyles.logbookBtn}
+            activeOpacity={0.85}
+            onPress={() => onAction(item)}
+          >
+            <Text style={modalStyles.logbookBtnText}>{item.actionLabel}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <FiveIconNav active="dashboard" onBeforeNavigate={onClose} />
       </Animated.View>
     </Modal>
   );
@@ -356,20 +365,6 @@ function CertCard({
   );
 }
 
-// ─── Bottom Nav Item ──────────────────────────────────────────────────────────
-function NavItem({
-  icon, label, active = false, onPress,
-}: {
-  icon: string; label: string; active?: boolean; onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={onPress}>
-      <Ionicons name={icon as any} size={22} color={active ? NAVY : MUTED} />
-      <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -398,7 +393,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScreenLayout>
+    <ScreenLayout hideFooter>
       <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
 
       <ScrollView
@@ -416,14 +411,7 @@ export default function DashboardScreen() {
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
-            <Ionicons name="notifications-outline" size={24} color={NAVY} />
-            {NOTIFICATION_COUNT > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerBtn} />
         </View>
 
         {/* ── Dashboard Title ── */}
@@ -467,14 +455,7 @@ export default function DashboardScreen() {
         <View style={{ height: 16 }} />
       </ScrollView>
 
-      {/* ── Bottom Navigation ── */}
-      <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 6 }]}>
-        <NavItem icon="airplane"    label="Dashboard" active onPress={() => {}} />
-        <NavItem icon="business"    label="Airports"  onPress={() => {}} />
-        <NavItem icon="paper-plane" label="Flights"   onPress={() => router.push("/flightscreen/add_flight")} />
-        <NavItem icon="book"        label="Logbook"   onPress={() => {}} />
-        <NavItem icon="person"      label="Profile"   onPress={() => {}} />
-      </View>
+      <FiveIconNav active="dashboard" />
 
       {/* ── Sidebar ── */}
       <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
@@ -484,9 +465,9 @@ export default function DashboardScreen() {
         item={selectedCert}
         visible={modalVisible}
         onClose={closeModal}
-        onViewLogbook={() => {
+        onAction={(item) => {
           closeModal();
-          router.push("/logbook");
+          router.push(item.id === "night" ? "/flightscreen/add_flight" : "/logbook");
         }}
       />
     </ScreenLayout>
@@ -570,82 +551,84 @@ const styles = StyleSheet.create({
   progressTrack: { height: 7, backgroundColor: "#D8DBE8", borderRadius: 4, overflow: "hidden" },
   progressFill:  { height: 7, borderRadius: 4, backgroundColor: NAVY },
 
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: WHITE,
-    borderTopWidth: 1, borderTopColor: BORDER,
-    paddingTop: 10,
-  },
-  navItem:       { flex: 1, alignItems: "center", gap: 3 },
-  navLabel:      { fontSize: 10, color: MUTED, fontWeight: "500" },
-  navLabelActive:{ color: NAVY, fontWeight: "700" },
 });
 
 // ─── Modal Styles ─────────────────────────────────────────────────────────────
 const modalStyles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  sheet: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
+  fullScreen: {
+    flex: 1,
     backgroundColor: WHITE,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 20,
   },
-  handle: {
-    width: 40, height: 4,
-    backgroundColor: "#D0D3DC",
-    borderRadius: 2,
-    marginBottom: 24,
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    color: NAVY,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  headerSpacer: {
+    width: 36,
+    height: 36,
+  },
+  modalContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingTop: 44,
+    paddingBottom: 28,
   },
 
   // Ring
-  ringWrap: { width: 160, height: 160, alignItems: "center", justifyContent: "center", marginBottom: 28 },
+  ringWrap: { width: 190, height: 190, alignItems: "center", justifyContent: "center", marginBottom: 52 },
   ringCenter: {
     position: "absolute",
     alignItems: "center",
   },
-  ringMain: { fontSize: 24, fontWeight: "900", color: NAVY },
-  ringUnit: { fontSize: 13, color: MUTED, marginTop: 2 },
-  ringPct:  { fontSize: 11, color: MUTED, marginTop: 2 },
+  ringMain: { fontSize: 31, fontWeight: "900", color: "#08031C" },
+  ringUnit: { fontSize: 15, color: "#08031C", fontWeight: "700", marginTop: 1 },
+  ringPct:  { fontSize: 12, color: "#62636B", fontWeight: "600", letterSpacing: 0.3, marginTop: 6 },
 
   // Stat boxes
-  statRow: { flexDirection: "row", gap: 10, marginBottom: 20, width: "100%" },
+  statRow: { flexDirection: "row", gap: 8, marginBottom: 44, width: "100%" },
   statBox: {
     flex: 1,
-    backgroundColor: BG,
-    borderRadius: 12,
-    paddingVertical: 14,
+    minHeight: 148,
+    backgroundColor: WHITE,
+    borderRadius: 11,
+    paddingVertical: 16,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: BORDER,
+    justifyContent: "space-between",
+    borderWidth: 2,
+    borderColor: "#C7C8CC",
   },
-  statBoxLabel: { fontSize: 11, color: MUTED, fontWeight: "600", marginBottom: 6 },
-  statBoxValue: { fontSize: 24, fontWeight: "900", color: NAVY },
-  statBoxUnit:  { fontSize: 10, color: MUTED, marginTop: 4 },
+  statBoxLabel: { fontSize: 12, color: NAVY, fontWeight: "700", marginBottom: 6 },
+  statBoxValue: { fontSize: 40, fontWeight: "900", color: NAVY },
+  statBoxUnit:  { fontSize: 12, color: NAVY, fontWeight: "600", marginTop: 4, textAlign: "center" },
 
   // Label
-  labelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 24 },
-  labelText:{ fontSize: 12, color: MUTED },
+  labelRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 38, width: "100%", paddingHorizontal: 18 },
+  labelText:{ fontSize: 12, color: NAVY, fontWeight: "500" },
 
   // Button
   logbookBtn: {
-    width: "100%",
+    width: 205,
     backgroundColor: AMBER,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#1F5BFF",
   },
-  logbookBtnText: { fontSize: 15, fontWeight: "800", color: NAVY },
+  logbookBtnText: { fontSize: 14, fontWeight: "800", color: "#08031C" },
 });
