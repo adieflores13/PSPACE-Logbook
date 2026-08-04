@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import FiveIconNav from "@/components/layout/five-icon-nav";
+import RegistrationStatusModal from "@/components/registration-status-modal";
 import { useAircraft } from "@/context/aircraft-context";
 
 const NAVY = "#032451";
@@ -36,12 +37,13 @@ export default function AircraftRegistrationScreen() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>(["Cadet", "Student Pilot"]);
   const [picDual, setPicDual] = useState("PIC");
   const [remarks, setRemarks] = useState("VFR training flight.\nPracticed steep turns and\nnormal landings.");
+  const [modalState, setModalState] = useState<"confirm" | "success" | null>(null);
 
   const toggleRole = (role: string) => setSelectedRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role]);
-  const proceed = () => {
+  const registerAircraft = () => {
     const parts = aircraftType.trim().split(/\s+/);
     addAircraft({ registration, make: parts[0] || "Aircraft", model: parts.slice(1).join(" "), variant: "" });
-    router.replace("/aircrafts" as never);
+    setModalState("success");
   };
 
   return (
@@ -79,9 +81,18 @@ export default function AircraftRegistrationScreen() {
         <Text style={styles.remarksLabel}>Remarks</Text>
         <TextInput style={styles.remarks} multiline value={remarks} onChangeText={setRemarks} placeholder="Enter remarks..." placeholderTextColor="#9FA3AA" textAlignVertical="top" />
         <View style={styles.info}><Ionicons name="information-circle-outline" size={19} color={NAVY} /><Text style={styles.infoText}>Role selection affects how this flight is recorded in your logbook.</Text></View>
-        <TouchableOpacity style={styles.proceed} activeOpacity={0.85} onPress={proceed}><Text style={styles.proceedText}>Proceed</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.proceed} activeOpacity={0.85} onPress={() => setModalState("confirm")}><Text style={styles.proceedText}>Proceed</Text></TouchableOpacity>
       </ScrollView>
       <FiveIconNav active="aircrafts" />
+      <RegistrationStatusModal
+        visible={modalState !== null}
+        variant={modalState ?? "confirm"}
+        registration={registration}
+        aircraftType={aircraftType}
+        onConfirm={registerAircraft}
+        onCancel={() => setModalState(null)}
+        onViewRegistration={() => router.replace({ pathname: "/aircraft_details", params: { registration } } as never)}
+      />
     </SafeAreaView>
   );
 }

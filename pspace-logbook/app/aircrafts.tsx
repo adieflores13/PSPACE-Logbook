@@ -34,7 +34,7 @@ export default function AircraftsScreen() {
           </View>
         ) : (
           aircraft.map((item) => (
-            <View key={item.id} style={styles.aircraftCard}>
+            <TouchableOpacity key={item.id} style={styles.aircraftCard} activeOpacity={0.82} onPress={() => router.push({ pathname: "/aircraft_details", params: { registration: item.registration } } as never)}>
               <View style={styles.cardAccent} />
               <View style={styles.cardMain}>
                 <Text style={styles.registration}>{item.registration}</Text>
@@ -44,7 +44,7 @@ export default function AircraftsScreen() {
                 <Text style={styles.hoursValue}>{item.hours}</Text>
                 <Text style={styles.hoursLabel}>Hours</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>

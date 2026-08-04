@@ -23,6 +23,7 @@ export default function RootLayout() {
           <Stack.Screen name="dashboardscreen/dashboard"          options={{ headerShown: false }} />
           <Stack.Screen name="aircrafts"                          options={{ headerShown: false }} />
           <Stack.Screen name="aircraft_registration"             options={{ headerShown: false }} />
+          <Stack.Screen name="aircraft_details"                  options={{ headerShown: false }} />
           <Stack.Screen name="aircraftscreen/aircraft_list"       options={{ headerShown: false }} />
           <Stack.Screen name="aircraftscreen/add_aircraft"        options={{ headerShown: false }} />
           <Stack.Screen name="flightscreen/flight_list"           options={{ headerShown: false }} />
