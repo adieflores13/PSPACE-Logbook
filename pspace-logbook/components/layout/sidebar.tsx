@@ -48,8 +48,8 @@ const SECTIONS: SidebarSection[] = [
     title: "MAIN",
     items: [
       { label: "Dashboard", route: "/dashboardscreen/dashboard", iconLib: "ion", icon: "stats-chart-outline", activeIcon: "stats-chart" },
-      { label: "Flights", route: "/flightscreen/flight_list", iconLib: "ion", icon: "paper-plane-outline", activeIcon: "paper-plane" },
-      { label: "Aircraft", route: "/aircraftscreen/aircraft_list", iconLib: "ion", icon: "airplane-outline", activeIcon: "airplane" },
+      { label: "Flights", route: "/flights", iconLib: "ion", icon: "paper-plane-outline", activeIcon: "paper-plane" },
+      { label: "Aircraft", route: "/aircrafts", iconLib: "ion", icon: "airplane-outline", activeIcon: "airplane" },
       { label: "Logbook", route: "/logbook", iconLib: "ion", icon: "clipboard-outline", activeIcon: "clipboard" },
       { label: "Analytics", route: "/analytics_and_requirements", iconLib: "ion", icon: "analytics-outline", activeIcon: "analytics" },
     ],

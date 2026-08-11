@@ -14,7 +14,7 @@ type Props = {
 const tabs: { key: ActiveTab; label: string; icon: keyof typeof Ionicons.glyphMap; route: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: "airplane-outline", route: "/dashboardscreen/dashboard" },
   { key: "aircrafts", label: "Aircrafts", icon: "calendar-outline", route: "/aircrafts" },
-  { key: "flights", label: "Flights", icon: "paper-plane-outline", route: "/flightscreen/flight_list" },
+  { key: "flights", label: "Flights", icon: "paper-plane-outline", route: "/flights" },
   { key: "logbook", label: "Logbook", icon: "reader-outline", route: "/logbook" },
   { key: "profile", label: "Profile", icon: "person-outline", route: "/profile" },
 ];

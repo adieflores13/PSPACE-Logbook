@@ -467,7 +467,7 @@ export default function DashboardScreen() {
         onClose={closeModal}
         onAction={(item) => {
           closeModal();
-          router.push(item.id === "night" ? "/flightscreen/add_flight" : "/logbook");
+          router.push(item.id === "night" ? "/add_flight_entry" : "/logbook");
         }}
       />
     </ScreenLayout>
