@@ -1,0 +1,53 @@
+export type LocalProfile = {
+  firstName?: string;
+  lastName?: string;
+  role?: "student" | "instructor";
+  profileImage: string | null;
+  fullName: string;
+  email: string;
+  dateOfBirth: string;
+  studentId: string;
+  academy: string;
+};
+
+export type Aircraft = {
+  id: string;
+  registration: string;
+  makeModelVariant: string;
+  hours: number;
+  make: string;
+  model: string;
+  variant: string;
+  category: string;
+  engineCategory: string;
+  serialNumber: string;
+  yearModel: string;
+  homeBase: string;
+  maxOccupants: string;
+  fuelType: string;
+  registrationDate: string;
+  expiryDate: string;
+  createdAt: string;
+};
+export type AddAircraftInput = Pick<Aircraft, "registration" | "make" | "model" | "variant"> & Partial<Pick<Aircraft, "category" | "engineCategory" | "serialNumber" | "yearModel" | "homeBase" | "maxOccupants" | "fuelType" | "registrationDate" | "expiryDate">>;
+export type Flight = {
+  id: string;
+  date: string;
+  aircraftId: string;
+  departure: string;
+  destination: string;
+  aircraftType: string;
+  aircraftRegistration: string;
+  duration: string;
+  durationMinutes: number;
+  landings: string;
+  instructor: string;
+  period: "Day" | "Night";
+  remarks: string;
+  blockOff: string;
+  blockOn: string;
+  pilotRole: string;
+  weather: string;
+  createdAt: string;
+};
+export type AddFlightInput = Omit<Flight, "id" | "createdAt" | "aircraftType" | "aircraftRegistration" | "durationMinutes" | "blockOff" | "blockOn" | "pilotRole" | "weather"> & Partial<Pick<Flight, "blockOff" | "blockOn" | "pilotRole" | "weather">>;

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -8,69 +7,36 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 
-import ScreenLayout from "@/components/layout/screen-layout";
+import { AppButton, AppScreen, FormField, InfoBox } from "@/components/ui/app-ui";
+import { palette, surfaces, type } from "@/constants/ui";
+import { useFlights } from "@/context/flight-context";
+import { useProfile } from "@/context/profile-context";
+import { useAuth } from "@/context/auth-context";
+import { DecisionModal } from "@/components/ui/decision-modal";
+import { DateField } from "@/components/ui/date-field";
+import type { LocalProfile } from "@/types/records";
 
-// ─── Illustrated avatar (matches the cartoon-style placeholder in the design) ──
 function CadetAvatar({ size }: { size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
-      <Circle cx="50" cy="50" r="50" fill="#DCE6F0" />
+      <Circle cx="50" cy="50" r="50" fill={palette.soft} />
       <Ellipse cx="50" cy="58" rx="26" ry="28" fill="#F0B088" />
-      <Path
-        d="M22 46 C22 20, 78 20, 78 46 C78 32, 66 24, 50 24 C34 24, 22 32, 22 46 Z"
-        fill="#2B2118"
-      />
-      <Path
-        d="M24 44 C20 54, 22 66, 30 72 C26 62, 27 50, 30 44 Z"
-        fill="#2B2118"
-      />
-      <Path
-        d="M76 44 C80 54, 78 66, 70 72 C74 62, 73 50, 70 44 Z"
-        fill="#2B2118"
-      />
-      <Path
-        d="M34 74 C40 82, 60 82, 66 74 C64 66, 58 62, 50 62 C42 62, 36 66, 34 74 Z"
-        fill="#8B5A2B"
-      />
+      <Path d="M22 46 C22 20, 78 20, 78 46 C78 32, 66 24, 50 24 C34 24, 22 32, 22 46 Z" fill="#2B2118" />
+      <Path d="M24 44 C20 54, 22 66, 30 72 C26 62, 27 50, 30 44 Z" fill="#2B2118" />
+      <Path d="M76 44 C80 54, 78 66, 70 72 C74 62, 73 50, 70 44 Z" fill="#2B2118" />
+      <Path d="M34 74 C40 82, 60 82, 66 74 C64 66, 58 62, 50 62 C42 62, 36 66, 34 74 Z" fill="#8B5A2B" />
     </Svg>
   );
 }
-
-const NAVY     = "#1A2340";
-const WHITE    = "#FFFFFF";
-const BG       = "#F7F8FC";
-const MUTED    = "#5E6983";
-const BORDER   = "#E8ECF4";
-const DISABLED = "#B7BECF";
-
-type UserProfile = {
-  profileImage: string | null;
-  fullName: string;
-  email: string;
-  dateOfBirth: string;
-  studentId: string;
-  academy: string;
-};
-
-// Mock stats — matches the flight-hours mock data used elsewhere in the app.
-const STATS = {
-  hours: "68:25",
-  flights: 42,
-  rating: "89%",
-  ratingLabel: "PPL",
-};
 
 type MenuItem = {
   label: string;
@@ -79,479 +45,265 @@ type MenuItem = {
 };
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  const [profile, setProfile] = useState<UserProfile>({
-    profileImage: null,
-    fullName: "Cadet Name",
-    email: "john.doe@example.com",
-    dateOfBirth: "1995-06-15",
-    studentId: "CD-10284",
-    academy: "Centennial Flight Academy",
-  });
+  const { flights } = useFlights();
+  const { profile, isLoading, error, reload, updateProfile } = useProfile();
+  const { signOut } = useAuth();
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const totalMinutes = flights.reduce((total, flight) => total + flight.durationMinutes, 0);
+  const hours = `${Math.floor(totalMinutes / 60)}:${String(totalMinutes % 60).padStart(2, "0")}`;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<UserProfile>(profile);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPickingImage, setIsPickingImage] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [editForm, setEditForm] = useState<LocalProfile>(profile);
 
   const openEditModal = () => {
+    if (isLoading) return;
     setEditForm(profile);
+    setSaveError("");
     setIsEditing(true);
   };
 
   const closeEditModal = () => {
-    setIsEditing(false);
+    if (!isSaving && !isPickingImage) setIsEditing(false);
   };
 
-  const handleSave = () => {
-    // Basic validation
-    if (!editForm.fullName.trim()) {
-      Alert.alert("Validation Error", "Full name cannot be empty.");
-      return;
-    }
-    if (!editForm.email.trim() || !editForm.email.includes("@")) {
-      Alert.alert("Validation Error", "Please enter a valid email address.");
-      return;
-    }
-    if (!editForm.dateOfBirth.trim()) {
-      Alert.alert("Validation Error", "Date of birth cannot be empty.");
+  const handleSave = async () => {
+    if (isSaving || isPickingImage || isLoading) return;
+    setSaveError("");
+    if (!editForm.firstName?.trim() || !editForm.lastName?.trim()) {
+      setSaveError("First and last name are required.");
       return;
     }
 
-    setProfile(editForm);
-    setIsEditing(false);
-    Alert.alert("Success", "Profile updated successfully!");
+    setIsSaving(true);
+    try {
+      await updateProfile(editForm);
+      setIsEditing(false);
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : "Your profile could not be saved to PSPACE. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (isSaving || isPickingImage) return;
+    setIsPickingImage(true);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Please allow access to your photos to update your profile picture.");
+        return;
+      }
 
-    if (!permissionResult.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Please allow access to your photos to update your profile picture."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setEditForm({ ...editForm, profileImage: result.assets[0].uri });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: Platform.OS === "web",
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const uri = Platform.OS === "web" && asset.base64
+          ? `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`
+          : asset.uri;
+        setEditForm((current) => ({ ...current, profileImage: uri }));
+      }
+    } catch {
+      Alert.alert("Photo Unavailable", "We couldn't open your photo library. Please try again.");
+    } finally {
+      setIsPickingImage(false);
     }
   };
 
-  const MENU_ITEMS: MenuItem[] = [
+  const menuItems: MenuItem[] = [
     { label: "Personal Information", icon: "person-outline", onPress: openEditModal },
     { label: "Documents & Certificates", icon: "clipboard-outline" },
-    { label: "Schools & Instructors", icon: "person-outline" },
+    { label: "Schools & Instructors", icon: "school-outline" },
     { label: "Flight Preference", icon: "layers-outline" },
     { label: "Notifications", icon: "notifications-outline" },
-    { label: "Security & Privacy", icon: "clipboard-outline" },
+    { label: "Security & Privacy", icon: "shield-checkmark-outline" },
   ];
 
   return (
-    <ScreenLayout>
-      <StatusBar backgroundColor={WHITE} barStyle="dark-content" />
+    <AppScreen title="Profile" tab="profile" muted>
+      {!!error && !isEditing && (
+        <View style={styles.menuList}>
+          <InfoBox>{error}</InfoBox>
+          <AppButton label="Retry" variant="outline" onPress={() => { void reload(); }} loading={isLoading} />
+        </View>
+      )}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Edit your profile"
+        accessibilityState={{ disabled: isLoading }}
+        disabled={isLoading}
+        style={styles.profileCard}
+        activeOpacity={0.8}
+        onPress={openEditModal}
+      >
+        {profile.profileImage ? (
+          <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarClip}><CadetAvatar size={56} /></View>
+        )}
+        <View style={styles.flex}>
+          <Text style={type.heading}>{profile.fullName}</Text>
+          {!!profile.email && <Text style={type.caption}>{profile.email}</Text>}
+          <Text style={type.caption}>{profile.role === "instructor" ? "Instructor" : "Student"}</Text>
+          {!!profile.studentId && <Text style={type.caption}>Student ID: {profile.studentId}</Text>}
+          {!!profile.academy && <Text style={type.caption}>{profile.academy}</Text>}
+        </View>
+        <Ionicons color={palette.muted} name="chevron-forward" size={20} />
+      </TouchableOpacity>
 
-      {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Ionicons color={NAVY} name="chevron-back" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.backBtn} />
+      <View style={styles.statsRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statValue}>{hours}</Text>
+          <Text style={type.caption}>Hours</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statValue}>{flights.length}</Text>
+          <Text style={type.caption}>Flights</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statValue}>{Math.min(100, Math.round(totalMinutes / (45 * 60) * 100))}%</Text>
+          <Text style={type.caption}>PPL goal</Text>
+        </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.screen}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Profile card ── */}
-        <TouchableOpacity style={styles.profileCard} activeOpacity={0.8} onPress={openEditModal}>
-          {profile.profileImage ? (
-            <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarClip}>
-              <CadetAvatar size={52} />
-            </View>
-          )}
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName} numberOfLines={1}>{profile.fullName}</Text>
-            <Text style={styles.profileMeta} numberOfLines={1}>Student Pilot · {profile.studentId}</Text>
-            <Text style={styles.profileMeta} numberOfLines={1}>{profile.academy}</Text>
-          </View>
-          <Ionicons color={MUTED} name="chevron-forward" size={20} />
-        </TouchableOpacity>
+      <View style={styles.menuList}>
+        {menuItems.map((item) => {
+          const enabled = !!item.onPress && !isLoading;
+          return (
+            <TouchableOpacity
+              key={item.label}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !enabled }}
+              style={styles.menuRow}
+              activeOpacity={0.7}
+              disabled={!enabled}
+              onPress={item.onPress}
+            >
+              <Ionicons color={enabled ? palette.navy : palette.muted} name={item.icon} size={22} />
+              <View style={styles.flex}>
+                <Text style={[type.label, !enabled && styles.muted]}>{item.label}</Text>
+                {!item.onPress && <Text style={type.caption}>Coming soon</Text>}
+              </View>
+              {enabled && <Ionicons color={palette.muted} name="chevron-forward" size={20} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-        {/* ── Stats ── */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{STATS.hours}</Text>
-            <Text style={styles.statLabel}>Hours</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{STATS.flights}</Text>
-            <Text style={styles.statLabel}>Flights</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{STATS.rating}</Text>
-            <Text style={styles.statLabel}>{STATS.ratingLabel}</Text>
-          </View>
-        </View>
+      <AppButton label="Sign Out" variant="outline" icon="log-out-outline" onPress={() => { setLogoutError(""); setLogoutVisible(true); }} />
+      <DecisionModal visible={logoutVisible} title="Sign out of Logbook?" description="Your aircraft and flights stay on this device, separate from other PSPACE accounts." icon="log-out-outline" primaryLabel="Sign Out" onPrimary={() => { setLogoutBusy(true); void signOut().catch((cause) => setLogoutError(cause.message)).finally(() => setLogoutBusy(false)); }} secondaryLabel="Cancel" onSecondary={() => setLogoutVisible(false)} loading={logoutBusy} error={logoutError} />
 
-        {/* ── Menu list ── */}
-        <View style={styles.menuList}>
-          {MENU_ITEMS.map((item) => {
-            const enabled = !!item.onPress;
-            return (
-              <TouchableOpacity
-                key={item.label}
-                style={styles.menuRow}
-                activeOpacity={enabled ? 0.7 : 1}
-                disabled={!enabled}
-                onPress={item.onPress}
-              >
-                <Ionicons color={enabled ? NAVY : DISABLED} name={item.icon} size={20} />
-                <Text style={[styles.menuLabel, !enabled && styles.menuLabelDisabled]}>
-                  {item.label}
-                </Text>
-                <Ionicons color={enabled ? MUTED : DISABLED} name="chevron-forward" size={18} />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Edit Modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={isEditing}
-        onRequestClose={closeEditModal}
-      >
+      <Modal animationType="slide" transparent visible={isEditing} onRequestClose={closeEditModal}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={styles.modalContent} accessibilityViewIsModal>
             <ScrollView
-              contentContainerStyle={styles.modalScroll}
+              contentContainerStyle={[styles.modalScroll, { paddingBottom: Math.max(insets.bottom, 20) }]}
+              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Edit Profile</Text>
-                <Pressable onPress={closeEditModal} hitSlop={10}>
-                  <Ionicons color={NAVY} name="close" size={26} />
-                </Pressable>
+                <Text style={[type.heading, styles.flex]}>Edit Profile</Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Close profile editor"
+                  accessibilityState={{ disabled: isSaving || isPickingImage }}
+                  disabled={isSaving || isPickingImage}
+                  style={styles.iconButton}
+                  onPress={closeEditModal}
+                >
+                  <Ionicons color={palette.navy} name="close" size={26} />
+                </TouchableOpacity>
               </View>
 
-              {/* Image picker */}
-              <TouchableOpacity
-                style={styles.imagePickerContainer}
-                onPress={pickImage}
-              >
-                {editForm.profileImage ? (
-                  <Image
-                    source={{ uri: editForm.profileImage }}
-                    style={styles.avatarEdit}
-                  />
-                ) : (
-                  <View style={styles.avatarPlaceholderEdit}>
-                    <CadetAvatar size={100} />
+              <View style={styles.photoSection}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Change profile photo"
+                  accessibilityState={{ disabled: isSaving || isPickingImage }}
+                  disabled={isSaving || isPickingImage}
+                  style={styles.imagePicker}
+                  onPress={pickImage}
+                >
+                  {editForm.profileImage ? (
+                    <Image source={{ uri: editForm.profileImage }} style={styles.avatarEdit} />
+                  ) : <CadetAvatar size={100} />}
+                  <View style={styles.cameraBadge}>
+                    <Ionicons color={palette.surface} name="camera" size={18} />
                   </View>
-                )}
-                <View style={styles.cameraBadge}>
-                  <Ionicons color={WHITE} name="camera" size={16} />
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.changePhotoText}>Tap to change photo</Text>
+                </TouchableOpacity>
+                <Text style={type.caption}>{isPickingImage ? "Opening photos..." : "Tap to change photo"}</Text>
+              </View>
 
-              {/* Form fields */}
               <FormField
-                label="Full Name"
-                value={editForm.fullName}
-                onChangeText={(text) =>
-                  setEditForm({ ...editForm, fullName: text })
-                }
-                placeholder="Enter your full name"
+                label="First Name"
+                value={editForm.firstName ?? ""}
+                onChangeText={(firstName) => setEditForm((current) => ({ ...current, firstName }))}
+                placeholder="First name"
+                autoCapitalize="words"
+                editable={!isSaving}
               />
-
+              <FormField label="Last Name" value={editForm.lastName ?? ""} onChangeText={(lastName) => setEditForm((current) => ({ ...current, lastName }))} placeholder="Last name" autoCapitalize="words" editable={!isSaving} />
               <FormField
                 label="Email"
                 value={editForm.email}
-                onChangeText={(text) =>
-                  setEditForm({ ...editForm, email: text })
-                }
-                placeholder="Enter your email"
+                onChangeText={(email) => setEditForm((current) => ({ ...current, email }))}
+                placeholder="Email (optional)"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                editable={false}
               />
+              <DateField label="Date of Birth" value={editForm.dateOfBirth} onChange={(dateOfBirth) => setEditForm((current) => ({ ...current, dateOfBirth }))} maximumDate={new Date()} disabled={isSaving} />
+              <InfoBox>Your name, date of birth, and photo are shared with PSPACE. Email, account type, and school membership are managed by the platform.</InfoBox>
 
-              <FormField
-                label="Date of Birth"
-                value={editForm.dateOfBirth}
-                onChangeText={(text) =>
-                  setEditForm({ ...editForm, dateOfBirth: text })
-                }
-                placeholder="YYYY-MM-DD"
-              />
-
-              {/* Action buttons */}
+              {!!saveError && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{saveError}</Text>}
               <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={closeEditModal}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.saveButton]}
-                  onPress={handleSave}
-                >
-                  <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
+                <View style={styles.flex}><AppButton label="Cancel" variant="outline" onPress={closeEditModal} disabled={isSaving || isPickingImage} /></View>
+                <View style={styles.flex}><AppButton label="Save" onPress={handleSave} loading={isSaving} disabled={isPickingImage || isLoading} /></View>
               </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScreenLayout>
-  );
-}
-
-// Sub-component for form input fields
-function FormField({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = "default",
-  autoCapitalize = "sentences",
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-  keyboardType?: "default" | "email-address";
-  autoCapitalize?: "none" | "sentences" | "words" | "characters";
-}) {
-  return (
-    <View style={styles.formField}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#A0A8BC"
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-      />
-    </View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: WHITE,
-    paddingHorizontal: 8,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: NAVY },
-
-  screen: {
-    flexGrow: 1,
-    backgroundColor: BG,
-    padding: 16,
-    paddingBottom: 24,
-  },
-
-  profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
-    gap: 12,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: BORDER,
-  },
-  avatarClip: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    overflow: "hidden",
-  },
-  profileInfo: { flex: 1 },
-  profileName: { fontSize: 16, fontWeight: "800", color: NAVY, marginBottom: 2 },
-  profileMeta: { fontSize: 12, color: MUTED },
-
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: WHITE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  statValue: { fontSize: 18, fontWeight: "900", color: NAVY },
-  statLabel: { fontSize: 11, color: MUTED, marginTop: 4 },
-
-  menuList: {
-    marginTop: 18,
-    gap: 10,
-  },
-  menuRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: WHITE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
-  menuLabel: { flex: 1, fontSize: 14, fontWeight: "600", color: NAVY },
-  menuLabelDisabled: { color: DISABLED },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: WHITE,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-  },
-  modalScroll: {
-    padding: 22,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: NAVY,
-  },
-  imagePickerContainer: {
-    alignSelf: "center",
-    marginBottom: 6,
-    position: "relative",
-  },
-  avatarEdit: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: BORDER,
-  },
-  avatarPlaceholderEdit: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: BG,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cameraBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: NAVY,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: WHITE,
-  },
-  changePhotoText: {
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 18,
-    fontSize: 13,
-    color: MUTED,
-  },
-  formField: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: MUTED,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: NAVY,
-    backgroundColor: BG,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 10,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  cancelButtonText: {
-    color: MUTED,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  saveButton: {
-    backgroundColor: NAVY,
-  },
-  saveButtonText: {
-    color: WHITE,
-    fontWeight: "700",
-    fontSize: 15,
-  },
+  flex: { flex: 1 },
+  muted: { color: palette.muted },
+  error: { ...type.caption, color: palette.danger },
+  profileCard: { ...surfaces.card, flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 8, minHeight: 90 },
+  avatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: palette.border },
+  avatarClip: { width: 56, height: 56, borderRadius: 28, overflow: "hidden" },
+  statsRow: { flexDirection: "row", gap: 10 },
+  statBox: { ...surfaces.card, flex: 1, minHeight: 90, paddingHorizontal: 6, alignItems: "center", justifyContent: "center", gap: 6 },
+  statValue: { ...type.heading, fontSize: 20 },
+  menuList: { gap: 10 },
+  menuRow: { ...surfaces.card, borderColor: palette.navy, minHeight: 50, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 8 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(3,36,81,0.45)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: palette.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%" },
+  modalScroll: { padding: 20, gap: 18 },
+  modalHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  photoSection: { alignItems: "center", gap: 12 },
+  imagePicker: { width: 100, height: 100 },
+  avatarEdit: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: palette.border },
+  cameraBadge: { position: "absolute", bottom: 0, right: 0, backgroundColor: palette.navy, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: palette.surface },
+  buttonRow: { flexDirection: "row", gap: 12 },
 });

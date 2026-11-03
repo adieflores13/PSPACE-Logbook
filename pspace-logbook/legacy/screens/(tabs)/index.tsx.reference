@@ -1,3 +1,4 @@
+// Archived UI reference. This file is intentionally outside Expo Router.
 // C:\nginx\html\pspace-logbook\pspace-logbook\app\(tabs)\index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";

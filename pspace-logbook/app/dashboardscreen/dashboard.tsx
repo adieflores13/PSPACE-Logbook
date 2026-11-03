@@ -1,634 +1,81 @@
-// C:\nginx\html\pspace-logbook\pspace-logbook\app\dashboardscreen\dashboard.tsx
-import React, { useRef, useEffect, useState } from "react";
-import {
-  Animated,
-  Easing,
-  Image,
-  Modal,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import Svg, { Circle } from "react-native-svg";
-import ScreenLayout from "@/components/layout/screen-layout";
-import Sidebar from "@/components/layout/sidebar";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import { AppButton, AppScreen } from "@/components/ui/app-ui";
 import FiveIconNav from "@/components/layout/five-icon-nav";
+import { font, palette, type } from "@/constants/ui";
+import { getFlightTotals, useFlights } from "@/context/flight-context";
+import { useProfile } from "@/context/profile-context";
+import { formatHours } from "@/utils/flight-format";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const CADET_NAME = "Cadet Name";
-const NOTIFICATION_COUNT = 1;
+const GOALS = [
+  { id: "ppl", title: "PPL(A)", fullName: "Private Pilot Licence", target: 45, action: "View Logbook" },
+  { id: "night", title: "Night Rating", fullName: "Night flying", target: 5, action: "Add Night Flight" },
+  { id: "atpl", title: "ATPL (A)", fullName: "Airline Transport Pilot Licence", target: 1500, action: "View Logbook" },
+] as const;
+type Goal = typeof GOALS[number] & { minutes: number; remaining: number; percentage: number };
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-type Certification = {
-  id: string;
-  title: string;
-  fullName: string;
-  required: number;
-  requiredLabel: string;
-  current: number;
-  remaining: number;
-  unit: string;
-  percentage: number;
-  progressLabel: string;
-  actionLabel: string;
-};
-
-const CERTIFICATIONS: Certification[] = [
-  {
-    id: "ppl",
-    title: "PPL(A)",
-    fullName: "Private Pilot License",
-    required: 45,
-    requiredLabel: "Total Hours",
-    current: 40,
-    remaining: 5,
-    unit: "Hours",
-    percentage: 89,
-    progressLabel: "Private Pilot License progress",
-    actionLabel: "View Logbook",
-  },
-  {
-    id: "night",
-    title: "Night Rating",
-    fullName: "Night Rating",
-    required: 5,
-    requiredLabel: "Night Hours",
-    current: 3.5,
-    remaining: 1.5,
-    unit: "Hours",
-    percentage: 70,
-    progressLabel: "Night flying requirement",
-    actionLabel: "Add Night Flight",
-  },
-  {
-    id: "atpl",
-    title: "ATPL (A)",
-    fullName: "Airline Transport Pilot License",
-    required: 1500,
-    requiredLabel: "Total Hours",
-    current: 980,
-    remaining: 520,
-    unit: "Hours",
-    percentage: 65,
-    progressLabel: "Airline Transport Pilot License progress",
-    actionLabel: "View Logbook",
-  },
-];
-// ─────────────────────────────────────────────────────────────────────────────
-
-const NAVY  = "#032451";
-const AMBER = "#FFBB57";
-const WHITE = "#FFFFFF";
-const BG    = "#F0F2F5";
-const CARD  = "#FFFFFF";
-const MUTED = "#8A8F9B";
-const BORDER= "#E8EAF0";
-
-// ─── Circular Progress Ring ───────────────────────────────────────────────────
-function CircularProgress({
-  id,
-  percentage,
-  current,
-  required,
-  unit,
-}: {
-  id: string;
-  percentage: number;
-  current: number;
-  required: number;
-  unit: string;
-}) {
-  const size = 190;
-  const strokeWidth = 14;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const animVal = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(animVal, {
-      toValue: percentage / 100,
-      duration: 900,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, []);
-
-  // We use a static SVG and animate the strokeDashoffset via JS
-  const [dashOffset, setDashOffset] = useState(circumference);
-
-  useEffect(() => {
-    const id = animVal.addListener(({ value }) => {
-      setDashOffset(circumference - value * circumference);
-    });
-    return () => animVal.removeListener(id);
-  }, []);
-
-  return (
-    <View style={modalStyles.ringWrap}>
-      <Svg width={size} height={size}>
-        {/* Track */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#E8EAF0"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        {/* Progress */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={NAVY}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={dashOffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-      </Svg>
-      {/* Center text */}
-      <View style={modalStyles.ringCenter}>
-        {id === "night" && (
-          <MaterialCommunityIcons name="weather-night" size={32} color={NAVY} />
-        )}
-        <Text style={modalStyles.ringMain}>
-          {current}/{required}
-        </Text>
-        <Text style={modalStyles.ringUnit}>{unit}</Text>
-        <Text style={modalStyles.ringPct}>{percentage}% Complete</Text>
-      </View>
-    </View>
-  );
+function GoalIcon({ id }: { id: Goal["id"] }) {
+  if (id === "night") return <Ionicons name="moon" size={48} color={palette.navy} />;
+  if (id === "atpl") return <Ionicons name="airplane-outline" size={50} color={palette.navy} style={{ transform: [{ rotate: "-90deg" }] }} />;
+  return <View style={styles.pilot}><MaterialCommunityIcons name="account-tie-hat" size={34} color={palette.surface} /></View>;
 }
-
-// ─── Detail Modal ─────────────────────────────────────────────────────────────
-function CertModal({
-  item,
-  visible,
-  onClose,
-  onAction,
-}: {
-  item: Certification | null;
-  visible: boolean;
-  onClose: () => void;
-  onAction: (item: Certification) => void;
-}) {
+function ProgressRing({ goal }: { goal: Goal }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  const size = 196, stroke = 14, radius = (size - stroke) / 2, circumference = 2 * Math.PI * radius;
+  useEffect(() => { const animation = Animated.timing(progress, { toValue: goal.percentage / 100, duration: 700, useNativeDriver: false }); animation.start(); return () => animation.stop(); }, [progress, goal.percentage]);
+  return <View style={styles.ring} accessible accessibilityRole="progressbar" accessibilityLabel={goal.title + " progress"} accessibilityValue={{ min: 0, max: 100, now: goal.percentage }}>
+    <Svg width={size} height={size}><Defs><LinearGradient id="ringGradient" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor="#98A4AE" /><Stop offset="0.8" stopColor={palette.navy} /></LinearGradient></Defs><Circle cx={size / 2} cy={size / 2} r={radius} stroke="#E8E8FF" strokeWidth={stroke} fill="none" /><AnimatedCircle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="url(#ringGradient)" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${circumference} ${circumference}`} strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] })} rotation="-90" origin={`${size / 2}, ${size / 2}`} /></Svg>
+    <View style={styles.ringCenter}>{goal.id === "night" && <Ionicons name="moon" size={26} color={palette.navy} />}<Text style={styles.ringValue} numberOfLines={1} adjustsFontSizeToFit>{formatHours(goal.minutes)}/{goal.target}</Text><Text style={styles.ringUnit}>Hours</Text><Text style={styles.ringPercent}>{goal.percentage}% Complete</Text></View>
+  </View>;
+}
+function GoalProgress({ goal, onClose, onAction }: { goal: Goal | null; onClose: () => void; onAction: () => void }) {
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(700)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 320,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      slideAnim.setValue(700);
-    }
-  }, [visible]);
-
-  if (!item) return null;
-
-  return (
-    <Modal visible={visible} animationType="none" onRequestClose={onClose}>
-      <StatusBar backgroundColor={WHITE} barStyle="dark-content" translucent={false} />
-      <Animated.View
-        style={[
-          modalStyles.fullScreen,
-          { transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <View style={[modalStyles.modalHeader, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity onPress={onClose} style={modalStyles.backButton} hitSlop={10}>
-            <Ionicons name="arrow-back" size={24} color={NAVY} />
-          </TouchableOpacity>
-          <Text style={modalStyles.modalTitle}>{item.title} Progress</Text>
-          <View style={modalStyles.headerSpacer} />
-        </View>
-
-        <ScrollView
-          contentContainerStyle={modalStyles.modalContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <CircularProgress
-            key={item.id + String(visible)}
-            id={item.id}
-            percentage={item.percentage}
-            current={item.current}
-            required={item.required}
-            unit={item.unit}
-          />
-
-          <View style={modalStyles.statRow}>
-            <View style={modalStyles.statBox}>
-              <Text style={modalStyles.statBoxLabel}>Required</Text>
-              <Text style={modalStyles.statBoxValue}>{item.required}</Text>
-              <Text style={modalStyles.statBoxUnit}>{item.requiredLabel}</Text>
-            </View>
-            <View style={modalStyles.statBox}>
-              <Text style={modalStyles.statBoxLabel}>Current</Text>
-              <Text style={modalStyles.statBoxValue}>{item.current}</Text>
-              <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
-            </View>
-            <View style={modalStyles.statBox}>
-              <Text style={modalStyles.statBoxLabel}>Remaining</Text>
-              <Text style={modalStyles.statBoxValue}>{item.remaining}</Text>
-              <Text style={modalStyles.statBoxUnit}>{item.unit}</Text>
-            </View>
-          </View>
-
-          <View style={modalStyles.labelRow}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={NAVY} />
-            <Text style={modalStyles.labelText}>{item.progressLabel}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={modalStyles.logbookBtn}
-            activeOpacity={0.85}
-            onPress={() => onAction(item)}
-          >
-            <Text style={modalStyles.logbookBtnText}>{item.actionLabel}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        <FiveIconNav active="dashboard" onBeforeNavigate={onClose} />
-      </Animated.View>
-    </Modal>
-  );
+  if (!goal) return null;
+  return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}><View style={[styles.progressPage, { paddingTop: insets.top }]}>
+    <View style={styles.progressHeader}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Close progress" onPress={onClose} style={styles.close}><Ionicons name="arrow-back" size={24} color={palette.navy} /></TouchableOpacity><Text style={styles.progressTitle}>{goal.title} Progress</Text><View style={styles.close} /></View>
+    <ScrollView contentContainerStyle={styles.progressContent} showsVerticalScrollIndicator={false}>
+      <ProgressRing goal={goal} />
+      <View style={styles.statRow}>{[{ label: "Target", value: String(goal.target), unit: goal.id === "night" ? "Night hours" : "Total hours" }, { label: "Current", value: formatHours(goal.minutes), unit: "Hours" }, { label: "Remaining", value: formatHours(goal.remaining), unit: "Hours" }].map((item) => <View style={styles.stat} key={item.label}><Text style={type.label}>{item.label}</Text><Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>{item.value}</Text><Text style={type.label}>{item.unit}</Text></View>)}</View>
+      <View style={styles.goalCaption}><Ionicons name="checkmark-circle-outline" size={19} color={palette.navy} /><Text style={type.caption}>{goal.fullName} progress</Text></View>
+      <AppButton compact label={goal.action} onPress={onAction} />
+      <Text style={styles.reference}>Personal training target based on your saved flights.</Text>
+    </ScrollView>
+    <FiveIconNav active="dashboard" onBeforeNavigate={onClose} />
+  </View></Modal>;
 }
-
-// ─── Icon per certification ───────────────────────────────────────────────────
-function CertIcon({ id }: { id: string }) {
-  return (
-    <View style={styles.certIconCircle}>
-      {id === "ppl" ? (
-        <FontAwesome5 name="user" size={26} color={WHITE} />
-      ) : id === "night" ? (
-        <MaterialCommunityIcons name="weather-night" size={30} color={WHITE} />
-      ) : (
-        <MaterialCommunityIcons name="airplane" size={30} color={WHITE} />
-      )}
-    </View>
-  );
-}
-
-// ─── Certification Card ───────────────────────────────────────────────────────
-function CertCard({
-  item,
-  delay = 0,
-  onPress,
-}: {
-  item: Certification;
-  delay?: number;
-  onPress: () => void;
-}) {
-  const anim    = useRef(new Animated.Value(0)).current;
-  const barAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(anim, {
-        toValue: 1, duration: 420, delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(barAnim, {
-        toValue: item.percentage / 100, duration: 800, delay: delay + 200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-      <Animated.View
-        style={[
-          styles.certCard,
-          {
-            opacity: anim,
-            transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-          },
-        ]}
-      >
-        <View style={styles.certRow}>
-          <CertIcon id={item.id} />
-
-          <View style={styles.certInfo}>
-            <Text style={styles.certTitle}>{item.title}</Text>
-            <View style={styles.certDetails}>
-              <View style={styles.certDetailRow}>
-                <Text style={styles.certDetailLabel}>Required:</Text>
-                <Text style={styles.certDetailValue}>{item.required} {item.requiredLabel}</Text>
-              </View>
-              <View style={styles.certDetailRow}>
-                <Text style={styles.certDetailLabel}>Current:</Text>
-                <Text style={styles.certDetailValue}>{item.current} {item.unit}</Text>
-              </View>
-              <View style={styles.certDetailRow}>
-                <Text style={styles.certDetailLabel}>Remaining:</Text>
-                <Text style={styles.certDetailValue}>{item.remaining} {item.unit}</Text>
-              </View>
-            </View>
-          </View>
-
-          <Text style={styles.certPct}>{item.percentage}%</Text>
-        </View>
-
-        <View style={styles.progressTrack}>
-          <Animated.View
-            style={[
-              styles.progressFill,
-              {
-                width: barAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["0%", "100%"],
-                }),
-              },
-            ]}
-          />
-        </View>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-
-  const [selectedCert, setSelectedCert] = useState<Certification | null>(null);
-  const [modalVisible, setModalVisible]  = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1, duration: 500,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  function openModal(cert: Certification) {
-    setSelectedCert(cert);
-    setModalVisible(true);
-  }
-
-  function closeModal() {
-    setModalVisible(false);
-  }
-
-  return (
-    <ScreenLayout hideFooter>
-      <StatusBar backgroundColor="transparent" barStyle="dark-content" translucent />
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7} onPress={() => setSidebarVisible(true)}>
-            <Ionicons name="menu" size={26} color={NAVY} />
-          </TouchableOpacity>
-          <Image
-            source={require("@/assets/images/logo-with-map.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <View style={styles.headerBtn} />
-        </View>
-
-        {/* ── Dashboard Title ── */}
-        <Animated.View style={[styles.titleBlock, { opacity: fadeAnim }]}>
-          <Text style={styles.dashTitle}>DASHBOARD</Text>
-          <Text style={styles.dashSubtitle}>
-            View schedules, aircraft status, and live aviation data at a glance.
-          </Text>
-        </Animated.View>
-
-        {/* ── Welcome Banner ── */}
-        <Animated.View style={[styles.welcomeBanner, { opacity: fadeAnim }]}>
-          <View style={styles.avatarCircle}>
-            <FontAwesome5 name="user" size={18} color={NAVY} />
-          </View>
-          <Text style={styles.welcomeText}>
-            Welcome, <Text style={styles.welcomeName}>({CADET_NAME})!</Text>
-          </Text>
-          <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
-            <Ionicons name="notifications-outline" size={22} color={NAVY} />
-            {NOTIFICATION_COUNT > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* ── Certification Cards ── */}
-        <View style={styles.cardsWrap}>
-          {CERTIFICATIONS.map((item, i) => (
-            <CertCard
-              key={item.id}
-              item={item}
-              delay={i * 100 + 100}
-              onPress={() => openModal(item)}
-            />
-          ))}
-        </View>
-
-        <View style={{ height: 16 }} />
-      </ScrollView>
-
-      <FiveIconNav active="dashboard" />
-
-      {/* ── Sidebar ── */}
-      <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
-
-      {/* ── Detail Modal ── */}
-      <CertModal
-        item={selectedCert}
-        visible={modalVisible}
-        onClose={closeModal}
-        onAction={(item) => {
-          closeModal();
-          router.push(item.id === "night" ? "/add_flight_entry" : "/logbook");
-        }}
-      />
-    </ScreenLayout>
-  );
+  const { flights } = useFlights();
+  const { profile } = useProfile();
+  const totals = getFlightTotals(flights);
+  const [selectedId, setSelectedId] = useState<Goal["id"] | null>(null);
+  const goals: Goal[] = GOALS.map((goal) => { const minutes = goal.id === "night" ? totals.nightMinutes : totals.minutes; return { ...goal, minutes, remaining: Math.max(0, goal.target * 60 - minutes), percentage: Math.min(100, Math.round(minutes / (goal.target * 60) * 100)) }; });
+  const selected = goals.find((goal) => goal.id === selectedId) ?? null;
+  return <AppScreen title="Dashboard" brand subtitle="Your flight hours and training progress at a glance." tab="dashboard">
+    <View style={styles.welcome}><View style={styles.avatar}>{profile.profileImage ? <Image source={{ uri: profile.profileImage }} style={styles.avatarImage} /> : <Ionicons name="person" size={21} color={palette.navy} />}</View><View style={styles.flex}><Text style={type.label}>Welcome,</Text><Text style={type.label}>{profile.fullName}!</Text></View><TouchableOpacity disabled accessibilityLabel="Notifications (coming soon)" accessibilityRole="button" style={styles.close}><Ionicons name="notifications-outline" size={24} color={palette.navy} /></TouchableOpacity></View>
+    {goals.map((goal) => <TouchableOpacity accessibilityRole="button" accessibilityLabel={goal.title + " progress, " + goal.percentage + "%"} key={goal.id} style={styles.goalCard} onPress={() => setSelectedId(goal.id)} activeOpacity={0.8}>
+      <View style={styles.cardRow}><View style={styles.icon}><GoalIcon id={goal.id} /></View><View style={styles.details}><Text style={styles.cardTitle}>{goal.title}</Text>{[["Target:", goal.target + (goal.id === "night" ? " night hrs" : " total hrs")], ["Current:", formatHours(goal.minutes) + " hrs"], ["Remaining:", formatHours(goal.remaining) + " hrs"]].map(([label, value]) => <View style={styles.dataRow} key={label}><Text style={styles.dataLabel}>{label}</Text><Text style={styles.dataValue}>{value}</Text></View>)}</View><Text style={styles.percentage}>{goal.percentage}%</Text></View>
+      <View style={styles.track}><View style={[styles.fill, { width: goal.percentage + "%" as `${number}%` }]} /></View>
+    </TouchableOpacity>)}
+    <Text style={styles.reference}>Personal training targets · calculated from your saved flights</Text>
+    <GoalProgress goal={selected} onClose={() => setSelectedId(null)} onAction={() => { setSelectedId(null); router.push(selected?.id === "night" ? "/add_flight_entry?period=Night" : "/logbook"); }} />
+  </AppScreen>;
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scroll:        { flex: 1, backgroundColor: BG },
-  scrollContent: { paddingBottom: 8 },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: WHITE,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  headerBtn: { padding: 4, position: "relative", width: 36, alignItems: "center" },
-  logoImage:  { width: 80, height: 40 },
-  badge: {
-    position: "absolute", top: 0, right: 0,
-    width: 16, height: 16, borderRadius: 8,
-    backgroundColor: AMBER, alignItems: "center", justifyContent: "center",
-  },
-  badgeText: { fontSize: 8, fontWeight: "800", color: WHITE },
-
-  titleBlock: {
-    backgroundColor: WHITE,
-    alignItems: "center",
-    paddingTop: 20, paddingBottom: 14, paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  dashTitle:    { fontSize: 30, fontWeight: "900", color: NAVY, letterSpacing: 4 },
-  dashSubtitle: { fontSize: 11, color: MUTED, textAlign: "center", marginTop: 4 },
-
-  welcomeBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: WHITE,
-    paddingHorizontal: 16, paddingVertical: 10,
-    gap: 10,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-    marginBottom: 4,
-  },
-  avatarCircle: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: BG,
-    borderWidth: 2, borderColor: BORDER,
-    alignItems: "center", justifyContent: "center",
-  },
-  welcomeText: { flex: 1, fontSize: 13, color: MUTED, fontWeight: "500" },
-  welcomeName: { color: NAVY, fontWeight: "700" },
-
-  cardsWrap: { paddingHorizontal: 14, paddingTop: 10, gap: 10 },
-
-  certCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    paddingTop: 16, paddingHorizontal: 16, paddingBottom: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
-  },
-  certRow:    { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
-  certIconCircle: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: NAVY,
-    alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  certInfo:   { flex: 1 },
-  certTitle:  { fontSize: 15, fontWeight: "800", color: NAVY, marginBottom: 5 },
-  certDetails:{ gap: 2 },
-  certDetailRow: { flexDirection: "row", gap: 6 },
-  certDetailLabel: { fontSize: 11, color: MUTED, width: 68 },
-  certDetailValue: { fontSize: 11, color: NAVY, fontWeight: "600" },
-  certPct:    { fontSize: 26, fontWeight: "900", color: NAVY, minWidth: 52, textAlign: "right", flexShrink: 0 },
-  progressTrack: { height: 7, backgroundColor: "#D8DBE8", borderRadius: 4, overflow: "hidden" },
-  progressFill:  { height: 7, borderRadius: 4, backgroundColor: NAVY },
-
-});
-
-// ─── Modal Styles ─────────────────────────────────────────────────────────────
-const modalStyles = StyleSheet.create({
-  fullScreen: {
-    flex: 1,
-    backgroundColor: WHITE,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: "flex-start",
-    justifyContent: "center",
-  },
-  modalTitle: {
-    color: NAVY,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  headerSpacer: {
-    width: 36,
-    height: 36,
-  },
-  modalContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingTop: 44,
-    paddingBottom: 28,
-  },
-
-  // Ring
-  ringWrap: { width: 190, height: 190, alignItems: "center", justifyContent: "center", marginBottom: 52 },
-  ringCenter: {
-    position: "absolute",
-    alignItems: "center",
-  },
-  ringMain: { fontSize: 31, fontWeight: "900", color: "#08031C" },
-  ringUnit: { fontSize: 15, color: "#08031C", fontWeight: "700", marginTop: 1 },
-  ringPct:  { fontSize: 12, color: "#62636B", fontWeight: "600", letterSpacing: 0.3, marginTop: 6 },
-
-  // Stat boxes
-  statRow: { flexDirection: "row", gap: 8, marginBottom: 44, width: "100%" },
-  statBox: {
-    flex: 1,
-    minHeight: 148,
-    backgroundColor: WHITE,
-    borderRadius: 11,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 2,
-    borderColor: "#C7C8CC",
-  },
-  statBoxLabel: { fontSize: 12, color: NAVY, fontWeight: "700", marginBottom: 6 },
-  statBoxValue: { fontSize: 40, fontWeight: "900", color: NAVY },
-  statBoxUnit:  { fontSize: 12, color: NAVY, fontWeight: "600", marginTop: 4, textAlign: "center" },
-
-  // Label
-  labelRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 38, width: "100%", paddingHorizontal: 18 },
-  labelText:{ fontSize: 12, color: NAVY, fontWeight: "500" },
-
-  // Button
-  logbookBtn: {
-    width: 205,
-    backgroundColor: AMBER,
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#1F5BFF",
-  },
-  logbookBtnText: { fontSize: 14, fontWeight: "800", color: "#08031C" },
+  flex: { flex: 1 }, welcome: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 2 }, avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.soft, alignItems: "center", justifyContent: "center" }, avatarImage: { width: 36, height: 36, borderRadius: 18 },
+  close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  goalCard: { backgroundColor: palette.surface, borderWidth: 1, borderColor: "#DBDEE2", borderRadius: 9, padding: 15, gap: 19, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 }, icon: { width: 48, alignItems: "center" }, pilot: { width: 47, height: 47, borderRadius: 24, backgroundColor: palette.navy, justifyContent: "center", alignItems: "center" },
+  details: { flex: 1, gap: 5 }, cardTitle: { ...type.heading, fontSize: 17, marginBottom: 10 }, dataRow: { flexDirection: "row", gap: 5, flexWrap: "wrap" }, dataLabel: { ...type.caption }, dataValue: { ...type.caption, fontFamily: font.medium },
+  percentage: { ...type.title, fontSize: 24, alignSelf: "flex-end", marginBottom: 4 }, track: { height: 13, backgroundColor: "#CDCDCD", borderRadius: 8, overflow: "hidden" }, fill: { height: 13, backgroundColor: palette.navy, borderRadius: 8 },
+  reference: { ...type.caption, fontSize: 11, textAlign: "center" }, progressPage: { flex: 1, backgroundColor: palette.surface },
+  progressHeader: { flexDirection: "row", alignItems: "center", padding: 10 }, progressTitle: { ...type.label, fontSize: 15, flex: 1, textAlign: "center" },
+  progressContent: { padding: 16, paddingTop: 30, gap: 32, flexGrow: 1, alignItems: "center" }, ring: { width: 196, height: 196, justifyContent: "center", alignItems: "center", marginBottom: 15 },
+  ringCenter: { position: "absolute", width: 158, alignItems: "center", gap: 4 }, ringValue: { ...type.title, fontSize: 30 }, ringUnit: { ...type.label, letterSpacing: 1 }, ringPercent: { ...type.caption, marginTop: 4 },
+  statRow: { flexDirection: "row", width: "100%", gap: 8 }, stat: { flex: 1, borderWidth: 1.5, borderColor: palette.border, borderRadius: 10, minHeight: 142, alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 4 }, statValue: { ...type.title, fontSize: 35, lineHeight: 44 }, goalCaption: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 10 },
 });

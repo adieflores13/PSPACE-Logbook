@@ -1,3 +1,4 @@
+// Archived UI reference. This file is intentionally outside Expo Router.
 // C:\nginx\html\pspace-logbook\pspace-logbook\app\(tabs)\explore.tsx
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';

@@ -1,3 +1,4 @@
+// Archived UI reference. This file is intentionally outside Expo Router.
 // app/flightscreen/index.tsx
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";

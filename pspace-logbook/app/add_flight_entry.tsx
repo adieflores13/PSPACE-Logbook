@@ -1,51 +1,91 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { Image, Modal, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import FiveIconNav from "@/components/layout/five-icon-nav";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppButton, AppScreen, FormField, FormRow, InfoBox, SelectField } from "@/components/ui/app-ui";
+import { DecisionModal } from "@/components/ui/decision-modal";
+import { DateField } from "@/components/ui/date-field";
+import { SelectionSheet } from "@/components/ui/selection-sheet";
+import { palette, type } from "@/constants/ui";
 import { useAircraft } from "@/context/aircraft-context";
 import { useFlights } from "@/context/flight-context";
-
-const NAVY = "#032451";
-const AMBER = "#FFBB57";
-
-function InputRow({ label, value, onChange, icon, suffix, onPress }: { label: string; value: string; onChange?: (value: string) => void; icon?: keyof typeof Ionicons.glyphMap; suffix?: string; onPress?: () => void }) {
-  const inner = <View style={styles.inputBox}>{icon && <Ionicons name={icon} size={15} color={NAVY} />}<TextInput style={styles.input} value={value} editable={!onPress} onChangeText={onChange} /><Text style={styles.suffix}>{suffix}</Text>{onPress && <Ionicons name="chevron-down" size={18} color={NAVY} />}</View>;
-  return <View style={styles.row}><Text style={styles.label}>{label}</Text>{onPress ? <TouchableOpacity style={styles.flex} onPress={onPress}>{inner}</TouchableOpacity> : <View style={styles.flex}>{inner}</View>}</View>;
-}
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
+import { formatFlightDate, formatHours, parseDuration, todayISO } from "@/utils/flight-format";
+import { validateFlightInput } from "@/utils/flight-validation";
+import type { AddFlightInput } from "@/types/records";
 
 export default function AddFlightEntryScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ period?: string }>();
   const { aircraft } = useAircraft();
   const { addFlight } = useFlights();
-  const [date, setDate] = useState("July 25, 2026"); const [departure, setDeparture] = useState("KFRG - Republic"); const [destination, setDestination] = useState("KBOS - Boston Logan"); const [duration, setDuration] = useState("1.6"); const [instructor, setInstructor] = useState("CFI John Smith"); const [landings, setLandings] = useState("2"); const [remarks, setRemarks] = useState("Training flight - Steep turns, stalls,\nlanding practice."); const [period, setPeriod] = useState("Day"); const [pickerVisible, setPickerVisible] = useState(false);
-  const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
-  const selectedAircraft = useMemo(() => aircraft.find((item) => item.id === selectedAircraftId) ?? aircraft[0], [aircraft, selectedAircraftId]);
-  const aircraftValue = selectedAircraft ? `${selectedAircraft.registration} - ${selectedAircraft.makeModelVariant.replaceAll(" / ", " ")}` : "Add an aircraft first";
-  const saveFlight = () => { if (!selectedAircraft) return; addFlight({ date, departure: departure.split(" ")[0], destination: destination.split(" ")[0], aircraftType: selectedAircraft.makeModelVariant.replaceAll(" / ", " "), aircraftRegistration: selectedAircraft.registration, duration, landings, instructor }); router.replace("/flights" as never); };
-  return <SafeAreaView style={styles.safeArea}>
-    <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Image source={require("@/assets/images/country2.png")} style={styles.map} resizeMode="cover" />
-      <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color={NAVY} /></TouchableOpacity><Text style={styles.title}>Add Flight Entry</Text><View style={styles.headerSpacer} /></View>
-      <InputRow label="Date" value={date} onChange={setDate} icon="calendar-outline" />
-      <InputRow label="Departure" value={departure} onChange={setDeparture} />
-      <InputRow label="Destination" value={destination} onChange={setDestination} />
-      <InputRow label="Aircraft" value={aircraftValue} onPress={() => aircraft.length > 0 && setPickerVisible(true)} />
-      {aircraft.length === 0 && <Text style={styles.aircraftHint}>Create an aircraft in Aircrafts before saving a flight.</Text>}
-      <InputRow label="Flight Duration" value={duration} onChange={setDuration} suffix="hrs" />
-      <View style={styles.row}><Text style={styles.label}>Day / Night</Text><View style={[styles.flex, styles.periods]}>{["Day", "Night"].map((item) => <TouchableOpacity key={item} style={[styles.period, period === item && styles.periodActive]} onPress={() => setPeriod(item)}><Ionicons name={item === "Day" ? "sunny" : "moon"} size={13} color={NAVY} /><Text style={styles.periodText}>{item}</Text></TouchableOpacity>)}</View></View>
-      <InputRow label="Instructor" value={instructor} onChange={setInstructor} />
-      <InputRow label="Landings" value={landings} onChange={setLandings} />
-      <View style={[styles.row, styles.remarksRow]}><Text style={styles.label}>Remarks</Text><TextInput value={remarks} onChangeText={setRemarks} multiline textAlignVertical="top" style={styles.remarks} /></View>
-      <View style={styles.info}><Ionicons name="information-circle-outline" size={19} color={NAVY} /><Text style={styles.infoText}>A single flight may count in multiple categories:{"\n"}Student + Multi-Engine + Instrument</Text></View>
-      <TouchableOpacity style={[styles.saveButton, !selectedAircraft && styles.disabledButton]} onPress={saveFlight} disabled={!selectedAircraft}><Text style={styles.saveButtonText}>Save Flight</Text></TouchableOpacity>
-    </ScrollView>
-    <FiveIconNav active="flights" />
-    <Modal visible={pickerVisible} transparent animationType="fade" onRequestClose={() => setPickerVisible(false)}><TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setPickerVisible(false)}><View style={styles.picker}><Text style={styles.pickerTitle}>Select Aircraft</Text>{aircraft.map((item) => <TouchableOpacity key={item.id} style={styles.pickerItem} onPress={() => { setSelectedAircraftId(item.id); setPickerVisible(false); }}><Ionicons name="airplane-outline" size={20} color={NAVY} /><View><Text style={styles.pickerRegistration}>{item.registration}</Text><Text style={styles.pickerModel}>{item.makeModelVariant}</Text></View></TouchableOpacity>)}</View></TouchableOpacity></Modal>
-  </SafeAreaView>;
+  const initialDate = useRef(todayISO()).current;
+  const initialPeriod = useRef<"Day" | "Night">(params.period === "Night" ? "Night" : "Day").current;
+  const [date, setDate] = useState(initialDate);
+  const [departure, setDeparture] = useState("");
+  const [destination, setDestination] = useState("");
+  const [duration, setDuration] = useState("");
+  const [landings, setLandings] = useState("0");
+  const [instructor, setInstructor] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [period, setPeriod] = useState(initialPeriod);
+  const [aircraftId, setAircraftId] = useState("");
+  const [blockOff, setBlockOff] = useState("");
+  const [blockOn, setBlockOn] = useState("");
+  const [pilotRole, setPilotRole] = useState("");
+  const [weather, setWeather] = useState("");
+  const [picker, setPicker] = useState<"aircraft" | "role" | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [error, setError] = useState("");
+  const selected = aircraft.find((item) => item.id === aircraftId);
+  const dirty = date !== initialDate || period !== initialPeriod || landings !== "0" || [departure, destination, duration, instructor, remarks, aircraftId, blockOff, blockOn, pilotRole, weather].some((value) => value.length > 0);
+  const guard = useUnsavedChanges(dirty, saving);
+  const input: AddFlightInput = { date, departure, destination, duration, landings: landings.trim(), instructor, remarks, period, aircraftId, blockOff, blockOn, pilotRole, weather };
+  const review = () => {
+    Keyboard.dismiss();
+    const message = validateFlightInput(input, aircraft);
+    setError(message ?? "");
+    if (!message) setReviewing(true);
+  };
+  async function save() {
+    if (savingRef.current) return;
+    savingRef.current = true; setSaving(true); setError("");
+    try {
+      await addFlight(input);
+      setReviewing(false);
+      guard.allowExit(() => router.dismissTo("/flights"));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save this flight."); }
+    finally { savingRef.current = false; setSaving(false); }
+  }
+  return <AppScreen title="Add Flight Entry">
+    <View style={styles.form}>
+      <DateField layout="row" label="Date" value={date} onChange={setDate} />
+      <FormField layout="row" label="Departure" value={departure} onChangeText={setDeparture} placeholder="Airport or code" autoCapitalize="characters" autoCorrect={false} editable={!saving} />
+      <FormField layout="row" label="Destination" value={destination} onChangeText={setDestination} placeholder="Airport or code" autoCapitalize="characters" autoCorrect={false} editable={!saving} />
+      <SelectField layout="row" label="Aircraft" value={selected ? selected.registration + " - " + selected.makeModelVariant.replaceAll(" / ", " ") : aircraft.length ? "Select an aircraft" : "No saved aircrafts"} onPress={() => setPicker("aircraft")} disabled={!aircraft.length || saving} />
+      {!aircraft.length && <><InfoBox>Add an aircraft before recording a flight.</InfoBox><AppButton compact label="Add Aircraft" variant="outline" onPress={() => router.push("/aircraft_registration")} /></>}
+      <FormField layout="row" label="Duration (hrs)" value={duration} onChangeText={setDuration} keyboardType="decimal-pad" placeholder="e.g. 1.5" editable={!saving} />
+      <FormRow label="Day / Night"><View style={styles.periods}>{(["Day", "Night"] as const).map((item) => <TouchableOpacity disabled={saving} key={item} accessibilityRole="radio" accessibilityState={{ checked: period === item }} onPress={() => setPeriod(item)} style={[styles.period, period === item && styles.selectedPeriod]}><Ionicons name={item === "Day" ? "sunny" : "moon"} size={16} color={palette.navy} /><Text style={type.label}>{item}</Text>{period === item && <Ionicons name="checkmark" size={16} color={palette.navy} />}</TouchableOpacity>)}</View></FormRow>
+      <FormField layout="row" label="Instructor" value={instructor} onChangeText={setInstructor} placeholder="Optional" editable={!saving} />
+      <FormField layout="row" label="Landings" value={landings} onChangeText={setLandings} keyboardType="number-pad" editable={!saving} />
+      <FormField layout="row" label="Remarks" value={remarks} onChangeText={setRemarks} placeholder="Training, manoeuvres and notes" multiline editable={!saving} />
+      <TouchableOpacity style={styles.more} accessibilityRole="button" accessibilityState={{ expanded: showMore }} onPress={() => setShowMore(!showMore)}><Text style={type.label}>Additional flight details</Text><Ionicons name={showMore ? "chevron-up" : "chevron-down"} size={18} color={palette.navy} /></TouchableOpacity>
+      {showMore && <><FormField layout="row" label="Block off" value={blockOff} onChangeText={setBlockOff} placeholder="HH:MM" keyboardType="numbers-and-punctuation" editable={!saving} /><FormField layout="row" label="Block on" value={blockOn} onChangeText={setBlockOn} placeholder="HH:MM" keyboardType="numbers-and-punctuation" editable={!saving} /><SelectField layout="row" label="PIC / Dual" value={pilotRole || "Select a role"} onPress={() => setPicker("role")} disabled={saving} /><FormField layout="row" label="Weather" value={weather} onChangeText={setWeather} placeholder="Conditions" editable={!saving} /></>}
+    </View>
+    <InfoBox>Saving adds this flight to your device and Logbook totals. Enter duration in decimal hours.</InfoBox>
+    {error && !reviewing ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+    <View style={styles.actions}><AppButton compact label="Save Flight" disabled={!selected || saving} onPress={review} /><AppButton compact label="Cancel" variant="outline" disabled={saving} onPress={() => router.back()} /></View>
+    <SelectionSheet visible={picker !== null} title={picker === "role" ? "Pilot role" : "Choose an aircraft"} selected={picker === "role" ? pilotRole : aircraftId} options={picker === "role" ? ["PIC", "Dual", "Co-pilot", "Instructor"].map((value) => ({ value, label: value })) : aircraft.map((item) => ({ value: item.id, label: item.registration, description: item.makeModelVariant.replaceAll(" / ", " ") }))} onSelect={picker === "role" ? setPilotRole : setAircraftId} onClose={() => setPicker(null)} />
+    <DecisionModal visible={reviewing} title="Confirm Flight Entry?" icon="airplane-outline" primaryLabel="Confirm" onPrimary={() => { void save(); }} secondaryLabel="Cancel" onSecondary={() => setReviewing(false)} loading={saving} error={error}>
+      <Text style={styles.confirmText}>{formatFlightDate(date)}</Text><Text style={styles.confirmText}>{selected?.registration} · {departure.split(" - ")[0]} → {destination.split(" - ")[0]}</Text><Text style={type.caption}>Total duration: {formatHours(parseDuration(duration) || 0)} hrs · {period}</Text>
+    </DecisionModal>
+    <DecisionModal visible={guard.visible} title="Discard unsaved changes?" description="Your flight entry has not been saved." tone="warning" icon="warning-outline" primaryLabel="Keep Editing" onPrimary={guard.keepEditing} secondaryLabel="Discard Changes" onSecondary={guard.discard} onDismiss={guard.keepEditing} />
+  </AppScreen>;
 }
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFFFFF" }, content: { paddingHorizontal: 15, paddingBottom: 28, overflow: "hidden" }, map: { position: "absolute", width: "125%", height: 190, top: -54, right: -94, opacity: 0.055 }, header: { height: 104, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }, backButton: { width: 42, height: 42, justifyContent: "center" }, headerSpacer: { width: 42 }, title: { color: NAVY, fontSize: 27, fontWeight: "900" }, row: { flexDirection: "row", alignItems: "center", gap: 15, marginBottom: 10 }, label: { width: 66, color: NAVY, fontSize: 11, fontWeight: "800" }, flex: { flex: 1 }, inputBox: { height: 28, borderWidth: 1.5, borderColor: "#BFC1C6", borderRadius: 5, flexDirection: "row", alignItems: "center", paddingHorizontal: 9, gap: 8 }, input: { flex: 1, fontSize: 11, color: NAVY, fontWeight: "700", paddingVertical: 3 }, suffix: { color: NAVY, fontSize: 10 }, aircraftHint: { color: "#B25329", fontSize: 10, marginLeft: 81, marginTop: -4, marginBottom: 8 }, periods: { flexDirection: "row", gap: 16 }, period: { width: 98, height: 21, borderWidth: 1.5, borderColor: "#BFC1C6", borderRadius: 4, flexDirection: "row", alignItems: "center", paddingHorizontal: 8, gap: 13 }, periodActive: { backgroundColor: "#F5F7FA" }, periodText: { color: NAVY, fontSize: 8 }, remarksRow: { alignItems: "flex-start", marginTop: 7 }, remarks: { flex: 1, minHeight: 97, borderWidth: 1.5, borderColor: "#BFC1C6", borderRadius: 5, padding: 9, color: NAVY, fontSize: 10 }, info: { minHeight: 63, backgroundColor: "#CCF2F9", borderRadius: 5, paddingHorizontal: 29, flexDirection: "row", alignItems: "center", gap: 14, marginTop: 9 }, infoText: { flex: 1, color: NAVY, fontSize: 11, lineHeight: 14 }, saveButton: { alignSelf: "center", width: 100, height: 34, borderRadius: 11, borderWidth: 1.5, borderColor: "#2563FF", backgroundColor: AMBER, justifyContent: "center", alignItems: "center", marginTop: 24 }, disabledButton: { opacity: 0.45 }, saveButtonText: { color: NAVY, fontSize: 11, fontWeight: "900" }, backdrop: { flex: 1, justifyContent: "center", backgroundColor: "rgba(3, 36, 81, 0.65)", padding: 30 }, picker: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20 }, pickerTitle: { color: NAVY, fontSize: 18, fontWeight: "900", marginBottom: 12 }, pickerItem: { flexDirection: "row", gap: 12, alignItems: "center", paddingVertical: 12, borderTopWidth: 1, borderColor: "#E4E6EB" }, pickerRegistration: { color: NAVY, fontSize: 14, fontWeight: "900" }, pickerModel: { color: "#65718A", fontSize: 11, marginTop: 2 },
+  form: { gap: 12, paddingTop: 12 }, periods: { flexDirection: "row", gap: 10, flexWrap: "wrap" }, period: { flex: 1, minWidth: 80, minHeight: 46, borderWidth: 1, borderColor: palette.border, borderRadius: 5, justifyContent: "center", alignItems: "center", flexDirection: "row", gap: 7 }, selectedPeriod: { backgroundColor: palette.soft, borderColor: palette.navy },
+  more: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: palette.border }, actions: { gap: 12, marginTop: 8 }, error: { ...type.body, color: palette.danger }, confirmText: { ...type.label, textAlign: "center", fontSize: 12 },
 });

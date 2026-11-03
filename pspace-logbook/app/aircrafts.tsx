@@ -1,86 +1,90 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import FiveIconNav from "@/components/layout/five-icon-nav";
-import { useAircraft } from "@/context/aircraft-context";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-const NAVY = "#032451";
-const AMBER = "#FFBB57";
-const MUTED = "#65718A";
+import { AppButton, AppScreen, EmptyState, SectionHeading, appStyles } from "@/components/ui/app-ui";
+import { palette, surfaces, type } from "@/constants/ui";
+import { useAircraft } from "@/context/aircraft-context";
+import { useFlights } from "@/context/flight-context";
+import { aircraftName, aircraftValue, getAircraftFlightSummary } from "@/utils/aircraft-details";
 
 export default function AircraftsScreen() {
   const router = useRouter();
-  const { aircraft } = useAircraft();
+  const { aircraft, isLoading, error, reload } = useAircraft();
+  const { flights, isLoading: flightsLoading, error: flightsError, reload: reloadFlights } = useFlights();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-      <View style={styles.header}>
-        <Image source={require("@/assets/images/country2.png")} style={styles.map} resizeMode="cover" />
-        <View style={styles.topRow}>
-          <Text style={styles.title}>Aircrafts</Text>
-          <Ionicons name="airplane-outline" size={28} color={NAVY} />
+    <AppScreen title="Aircrafts" tab="aircrafts">
+      <SectionHeading title="Your aircrafts" />
+      {isLoading ? (
+        <View style={styles.loading} accessibilityLiveRegion="polite">
+          <ActivityIndicator color={palette.navy} />
+          <Text style={type.body}>Loading saved aircraft...</Text>
         </View>
-        <Text style={styles.subtitle}>Manage your aircraft registrations and details.</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {aircraft.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}><Ionicons name="airplane-outline" size={30} color={NAVY} /></View>
-            <Text style={styles.emptyTitle}>No aircraft added yet</Text>
-            <Text style={styles.emptyText}>Add an aircraft registration to start building your fleet.</Text>
-          </View>
-        ) : (
-          aircraft.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.aircraftCard} activeOpacity={0.82} onPress={() => router.push({ pathname: "/aircraft_details", params: { registration: item.registration } } as never)}>
-              <View style={styles.cardAccent} />
-              <View style={styles.cardMain}>
-                <Text style={styles.registration}>{item.registration}</Text>
-                <Text style={styles.model}>{item.makeModelVariant}</Text>
-              </View>
-              <View style={styles.hours}>
-                <Text style={styles.hoursValue}>{item.hours}</Text>
-                <Text style={styles.hoursLabel}>Hours</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
-
-      <View style={styles.actionArea}>
-        <TouchableOpacity style={styles.addButton} activeOpacity={0.85} onPress={() => router.push("/aircraft_registration" as never)}>
-          <Ionicons name="add" size={22} color={NAVY} />
-          <Text style={styles.addButtonText}>Add Aircraft</Text>
-        </TouchableOpacity>
-      </View>
-      <FiveIconNav active="aircrafts" />
-    </SafeAreaView>
+      ) : error ? (
+        <View style={appStyles.section}>
+          <EmptyState title="Aircraft unavailable" message={error} icon="cloud-offline-outline" />
+          <AppButton label="Try Again" variant="outline" onPress={() => { void reload(); }} />
+        </View>
+      ) : (
+        <>
+          {flightsError && (
+            <View style={[surfaces.card, appStyles.section]}>
+              <Text style={[type.body, styles.error]}>{flightsError} Logged hours are unavailable.</Text>
+              <AppButton label="Retry Flight Hours" variant="outline" onPress={() => { void reloadFlights(); }} />
+            </View>
+          )}
+          {aircraft.length === 0 ? (
+            <EmptyState title="No aircraft added yet" message="Add the registration, manufacturer and model of your aircraft to start your local logbook." icon="airplane-outline" />
+          ) : (
+            <View style={appStyles.section}>
+              <Text style={styles.count}>{aircraft.length} saved aircraft</Text>
+              {aircraft.map((item) => {
+                const { durationMinutes } = getAircraftFlightSummary(item.id, flights);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View aircraft ${aircraftValue(item.registration)}`}
+                    activeOpacity={0.8}
+                    style={styles.aircraftCard}
+                    onPress={() => router.push({ pathname: "/aircraft_details", params: { id: item.id } })}
+                  >
+                    <View style={styles.cardHeading}>
+                      <View style={styles.icon}><Ionicons name="airplane-outline" size={24} color={palette.navy} /></View>
+                      <View style={appStyles.flex}>
+                        <Text style={type.heading}>{aircraftValue(item.registration)}</Text>
+                        <Text style={styles.model}>{aircraftName(item)}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={22} color={palette.navy} />
+                    </View>
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.hoursLabel}>Logged hours</Text>
+                      <Text style={styles.hoursValue}>{flightsLoading ? "Loading..." : flightsError ? "Unavailable" : `${(durationMinutes / 60).toFixed(2)} h`}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </>
+      )}
+      <View style={styles.action}><AppButton compact label="Add Aircraft" onPress={() => router.push("/aircraft_registration")} disabled={isLoading || !!error} /></View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { height: 172, paddingHorizontal: 25, paddingTop: 20, overflow: "hidden", justifyContent: "center", backgroundColor: "#F8F9FB" },
-  map: { position: "absolute", width: "125%", height: "145%", right: -100, top: -76, opacity: 0.06 },
-  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { fontSize: 34, fontWeight: "900", color: NAVY, letterSpacing: -0.7 },
-  subtitle: { color: MUTED, fontSize: 14, marginTop: 7, maxWidth: 280 },
-  content: { padding: 20, paddingBottom: 28, gap: 14 },
-  aircraftCard: { minHeight: 104, flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: "#C9CBD0", borderRadius: 12, backgroundColor: "#FFFFFF", overflow: "hidden", shadowColor: NAVY, shadowOpacity: 0.1, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  cardAccent: { width: 7, alignSelf: "stretch", backgroundColor: AMBER },
-  cardMain: { flex: 1, paddingHorizontal: 18 },
-  registration: { color: NAVY, fontSize: 23, fontWeight: "900", letterSpacing: 0.2 },
-  model: { color: MUTED, fontSize: 13, fontWeight: "600", marginTop: 6 },
-  hours: { minWidth: 72, alignItems: "center", paddingRight: 14 },
-  hoursValue: { fontSize: 24, fontWeight: "900", color: NAVY },
-  hoursLabel: { fontSize: 11, fontWeight: "700", color: MUTED, marginTop: 2 },
-  emptyCard: { alignItems: "center", borderWidth: 1.5, borderColor: "#C9CBD0", borderRadius: 13, paddingHorizontal: 30, paddingVertical: 34, backgroundColor: "#FFFFFF" },
-  emptyIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: "#EAF0F8", alignItems: "center", justifyContent: "center", marginBottom: 14 },
-  emptyTitle: { fontSize: 18, fontWeight: "900", color: NAVY },
-  emptyText: { fontSize: 13, color: MUTED, textAlign: "center", lineHeight: 19, marginTop: 8 },
-  actionArea: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, backgroundColor: "#FFFFFF" },
-  addButton: { alignSelf: "center", minWidth: 190, height: 50, paddingHorizontal: 24, borderRadius: 13, borderWidth: 1.5, borderColor: "#2563FF", backgroundColor: AMBER, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  addButtonText: { fontSize: 17, fontWeight: "900", color: NAVY },
+  loading: { alignItems: "center", justifyContent: "center", gap: 12, paddingVertical: 40 },
+  count: { ...type.label, color: palette.muted },
+  action: { marginTop: 8 },
+  aircraftCard: { ...surfaces.card, borderWidth: 1.5, padding: 0, overflow: "hidden" },
+  cardHeading: { flexDirection: "row", alignItems: "center", gap: 12, padding: 18 },
+  icon: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: palette.navy, alignItems: "center", justifyContent: "center" },
+  model: { ...type.body, color: palette.muted, marginTop: 3 },
+  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingHorizontal: 18, paddingVertical: 12, borderTopWidth: 1, borderTopColor: palette.border },
+  hoursLabel: { ...type.label, color: palette.muted },
+  hoursValue: { ...type.body, fontWeight: "700" },
+  error: { color: palette.danger },
 });
