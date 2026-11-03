@@ -23,7 +23,7 @@ export default function LogbookScreen() {
   const entries = useMemo(() => flights.filter((flight) => (month === "all" || flight.date.startsWith(month)) && (aircraftId === "all" || flight.aircraftId === aircraftId)).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), [flights, month, aircraftId]);
   const totals = getFlightTotals(entries);
   const metrics = [{ label: "Total hours", value: formatHours(totals.minutes) }, { label: "Day hours", value: formatHours(totals.dayMinutes) }, { label: "Night hours", value: formatHours(totals.nightMinutes) }, { label: "Landings", value: String(totals.landings) }];
-  return <AppScreen title="Logbook" brand subtitle="Your flight journal, totals and flying history." tab="logbook">
+  return <AppScreen title="Logbook" subtitle="Your flight journal, totals and flying history." tab="logbook">
     <View style={styles.metrics}>{metrics.map((metric) => <View key={metric.label} style={[surfaces.card, styles.metric]}><Text style={styles.metricValue}>{metric.value}</Text><Text style={type.caption}>{metric.label}</Text></View>)}</View>
     <View style={styles.filters}><View style={styles.flex}><SelectField label="Date" value={monthOptions.find((item) => item.value === month)?.label ?? "All dates"} onPress={() => setFilter("month")} /></View><View style={styles.flex}><SelectField label="Aircraft" value={aircraftOptions.find((item) => item.value === aircraftId)?.label ?? "All aircrafts"} onPress={() => setFilter("aircraft")} /></View></View>
     <View style={styles.sectionHeader}><Text style={type.heading}>Flight journal</Text><Text style={type.caption}>{entries.length} {entries.length === 1 ? "entry" : "entries"}</Text></View>

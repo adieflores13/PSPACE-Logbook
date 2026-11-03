@@ -127,7 +127,6 @@ export default function ProfileScreen() {
     { label: "Documents & Certificates", icon: "clipboard-outline" },
     { label: "Schools & Instructors", icon: "school-outline" },
     { label: "Flight Preference", icon: "layers-outline" },
-    { label: "Notifications", icon: "notifications-outline" },
     { label: "Security & Privacy", icon: "shield-checkmark-outline" },
   ];
 

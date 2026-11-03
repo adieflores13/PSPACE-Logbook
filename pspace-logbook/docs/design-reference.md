@@ -8,7 +8,7 @@ The full screenshot set supplied on November 3, 2026 is the visual reference. La
 | --- | --- |
 | 1 | Sidebar logo, profile summary, Main / Training / Account sections, navy active item. Deferred destinations stay disabled. |
 | 2 | Profile summary, three bordered metrics, outlined menu rows. All displayed metrics use saved records. |
-| 3 | Dashboard logo/title, welcome row with one bell, certification cards, percentage and progress bar. |
+| 3 | Dashboard logo/title, welcome row, certification cards, percentage and progress bar. The notification bell is intentionally omitted. |
 | 4–5 | Full-screen progress ring, three summary boxes, centered amber action. Night Rating uses its correct title. |
 | 7 | Registration form rows, engine category options, cyan information panel. Aircraft and flight information remain separate workflows. |
 | 8–9 | Aircraft confirmation/success dialogs with circular illustrations, navy primary and outlined secondary buttons. |
@@ -32,3 +32,4 @@ Analytics (6), cloud synchronization messaging (16), aircraft archiving (17), fl
 - Buttons retain a mobile touch area of at least 44 points. Confirmation buttons are pill shaped; primary screen actions are centered and amber.
 - Dashboard spacing adapts on small/short screens, and the percentage moves above the details when width or text scaling requires it. The header scrolls with the cards while the navbar stays outside the scroll viewport. Small phones may show fewer cards at once; the complete last card remains reachable above the navbar without shrinking accessibility text.
 - Saved records and unknown values remain truthful: no fabricated registry data, verification claims or promised cloud synchronization.
+- Notification controls are omitted from Dashboard, Sidebar and Profile to keep Logbook focused on flight tracking rather than PSPACE platform announcements.

@@ -22,7 +22,6 @@ const sections: { title: string; items: Item[] }[] = [
     { label: "Training Schedule", icon: "calendar-outline" },
   ] },
   { title: "ACCOUNT", items: [
-    { label: "Notifications", icon: "notifications-outline" },
     { label: "Profile", route: "/profile", icon: "person-outline" },
     { label: "Settings", icon: "settings-outline" },
   ] },
