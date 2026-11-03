@@ -30,4 +30,5 @@ Analytics (6), cloud synchronization messaging (16), aircraft archiving (17), fl
 - Montserrat typography with regular and semibold weights, navy `#032451`, amber `#FFBB57`, cyan information panels and thin gray borders.
 - Compact outlined records and side-by-side labels/fields where space permits. Narrow screens and larger text settings stack form fields.
 - Buttons retain a mobile touch area of at least 44 points. Confirmation buttons are pill shaped; primary screen actions are centered and amber.
+- Dashboard spacing adapts on small/short screens, and the percentage moves above the details when width or text scaling requires it. The header scrolls with the cards while the navbar stays outside the scroll viewport. Small phones may show fewer cards at once; the complete last card remains reachable above the navbar without shrinking accessibility text.
 - Saved records and unknown values remain truthful: no fabricated registry data, verification claims or promised cloud synchronization.

@@ -34,7 +34,7 @@ export default function FiveIconNav({ active, onBeforeNavigate }: Props) {
   };
 
   return (
-    <View style={[styles.nav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View testID="main-navbar" style={[styles.nav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {tabs.map((tab) => {
         const isActive = tab.key === active;
         return (
@@ -52,7 +52,7 @@ export default function FiveIconNav({ active, onBeforeNavigate }: Props) {
               size={26}
               color={isActive ? NAVY : MUTED}
             />
-            <Text style={[styles.label, isActive && styles.activeLabel]} numberOfLines={1}>
+            <Text style={[styles.label, isActive && styles.activeLabel]} numberOfLines={2}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -71,8 +71,11 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderTopWidth: 0,
     paddingTop: 10,
+    flexShrink: 0,
+    zIndex: 1,
+    elevation: 3,
   },
-  item: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 4 },
-  label: { ...type.caption, fontSize: 9, color: MUTED },
+  item: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 2, alignItems: "center", justifyContent: "center", gap: 4 },
+  label: { ...type.caption, fontSize: 9, color: MUTED, textAlign: "center", maxWidth: "100%" },
   activeLabel: { color: NAVY, fontWeight: "800" },
 });

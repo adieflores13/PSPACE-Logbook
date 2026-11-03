@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import { font, palette, type } from "@/constants/ui";
 import { getFlightTotals, useFlights } from "@/context/flight-context";
 import { useProfile } from "@/context/profile-context";
 import { formatHours } from "@/utils/flight-format";
+import { getDashboardLayout } from "@/utils/dashboard-layout";
 
 const GOALS = [
   { id: "ppl", title: "PPL(A)", fullName: "Private Pilot Licence", target: 45, action: "View Logbook" },
@@ -19,10 +20,24 @@ const GOALS = [
 type Goal = typeof GOALS[number] & { minutes: number; remaining: number; percentage: number };
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-function GoalIcon({ id }: { id: Goal["id"] }) {
-  if (id === "night") return <Ionicons name="moon" size={48} color={palette.navy} />;
-  if (id === "atpl") return <Ionicons name="airplane-outline" size={50} color={palette.navy} style={{ transform: [{ rotate: "-90deg" }] }} />;
-  return <View style={styles.pilot}><MaterialCommunityIcons name="account-tie-hat" size={34} color={palette.surface} /></View>;
+function GoalIcon({ id, size }: { id: Goal["id"]; size: number }) {
+  if (id === "night") return <Ionicons name="moon" size={size} color={palette.navy} />;
+  if (id === "atpl") return <Ionicons name="airplane-outline" size={size} color={palette.navy} style={{ transform: [{ rotate: "-90deg" }] }} />;
+  return <View style={[styles.pilot, { width: size, height: size }]}><MaterialCommunityIcons name="account-tie-hat" size={size * 0.7} color={palette.surface} /></View>;
+}
+function GoalCard({ goal, compact, stackedPercentage, onPress }: { goal: Goal; compact: boolean; stackedPercentage: boolean; onPress: () => void }) {
+  const percentage = <Text style={styles.percentage}>{goal.percentage}%</Text>;
+  return <TouchableOpacity testID={`goal-card-${goal.id}`} accessibilityRole="button" accessibilityLabel={`${goal.title} progress, ${goal.percentage}%`} accessibilityHint="Open detailed progress" style={[styles.goalCard, compact && styles.compactCard]} onPress={onPress} activeOpacity={0.8}>
+    <View style={styles.cardRow}>
+      <View style={[styles.icon, compact && styles.compactIcon]}><GoalIcon id={goal.id} size={compact ? 36 : 44} /></View>
+      <View style={styles.details}>
+        <View style={styles.cardHeading}><Text style={styles.cardTitle}>{goal.title}</Text>{stackedPercentage && percentage}</View>
+        {[["Target:", goal.target + (goal.id === "night" ? " night hrs" : " total hrs")], ["Current:", formatHours(goal.minutes) + " hrs"], ["Remaining:", formatHours(goal.remaining) + " hrs"]].map(([label, value]) => <Text key={label} style={styles.dataLabel}>{label} <Text style={styles.dataValue}>{value}</Text></Text>)}
+      </View>
+      {!stackedPercentage && <View style={styles.cardPercentage}>{percentage}</View>}
+    </View>
+    <View style={styles.track}><View style={[styles.fill, { width: goal.percentage + "%" as `${number}%` }]} /></View>
+  </TouchableOpacity>;
 }
 function ProgressRing({ goal }: { goal: Goal }) {
   const progress = useRef(new Animated.Value(0)).current;
@@ -49,6 +64,8 @@ function GoalProgress({ goal, onClose, onAction }: { goal: Goal | null; onClose:
   </View></Modal>;
 }
 export default function DashboardScreen() {
+  const { width, height, fontScale } = useWindowDimensions();
+  const layout = getDashboardLayout(width, height, fontScale);
   const router = useRouter();
   const { flights } = useFlights();
   const { profile } = useProfile();
@@ -56,12 +73,9 @@ export default function DashboardScreen() {
   const [selectedId, setSelectedId] = useState<Goal["id"] | null>(null);
   const goals: Goal[] = GOALS.map((goal) => { const minutes = goal.id === "night" ? totals.nightMinutes : totals.minutes; return { ...goal, minutes, remaining: Math.max(0, goal.target * 60 - minutes), percentage: Math.min(100, Math.round(minutes / (goal.target * 60) * 100)) }; });
   const selected = goals.find((goal) => goal.id === selectedId) ?? null;
-  return <AppScreen title="Dashboard" brand subtitle="Your flight hours and training progress at a glance." tab="dashboard">
+  return <AppScreen title="Dashboard" brand scrollHeader contentStyle={layout.compact ? styles.compactContent : undefined} subtitle="Your flight hours and training progress at a glance." tab="dashboard">
     <View style={styles.welcome}><View style={styles.avatar}>{profile.profileImage ? <Image source={{ uri: profile.profileImage }} style={styles.avatarImage} /> : <Ionicons name="person" size={21} color={palette.navy} />}</View><View style={styles.flex}><Text style={type.label}>Welcome,</Text><Text style={type.label}>{profile.fullName}!</Text></View><TouchableOpacity disabled accessibilityLabel="Notifications (coming soon)" accessibilityRole="button" style={styles.close}><Ionicons name="notifications-outline" size={24} color={palette.navy} /></TouchableOpacity></View>
-    {goals.map((goal) => <TouchableOpacity accessibilityRole="button" accessibilityLabel={goal.title + " progress, " + goal.percentage + "%"} key={goal.id} style={styles.goalCard} onPress={() => setSelectedId(goal.id)} activeOpacity={0.8}>
-      <View style={styles.cardRow}><View style={styles.icon}><GoalIcon id={goal.id} /></View><View style={styles.details}><Text style={styles.cardTitle}>{goal.title}</Text>{[["Target:", goal.target + (goal.id === "night" ? " night hrs" : " total hrs")], ["Current:", formatHours(goal.minutes) + " hrs"], ["Remaining:", formatHours(goal.remaining) + " hrs"]].map(([label, value]) => <View style={styles.dataRow} key={label}><Text style={styles.dataLabel}>{label}</Text><Text style={styles.dataValue}>{value}</Text></View>)}</View><Text style={styles.percentage}>{goal.percentage}%</Text></View>
-      <View style={styles.track}><View style={[styles.fill, { width: goal.percentage + "%" as `${number}%` }]} /></View>
-    </TouchableOpacity>)}
+    {goals.map((goal) => <GoalCard key={goal.id} goal={goal} {...layout} onPress={() => setSelectedId(goal.id)} />)}
     <Text style={styles.reference}>Personal training targets · calculated from your saved flights</Text>
     <GoalProgress goal={selected} onClose={() => setSelectedId(null)} onAction={() => { setSelectedId(null); router.push(selected?.id === "night" ? "/add_flight_entry?period=Night" : "/logbook"); }} />
   </AppScreen>;
@@ -69,10 +83,11 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 }, welcome: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 2 }, avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.soft, alignItems: "center", justifyContent: "center" }, avatarImage: { width: 36, height: 36, borderRadius: 18 },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  goalCard: { backgroundColor: palette.surface, borderWidth: 1, borderColor: "#DBDEE2", borderRadius: 9, padding: 15, gap: 19, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 }, icon: { width: 48, alignItems: "center" }, pilot: { width: 47, height: 47, borderRadius: 24, backgroundColor: palette.navy, justifyContent: "center", alignItems: "center" },
-  details: { flex: 1, gap: 5 }, cardTitle: { ...type.heading, fontSize: 17, marginBottom: 10 }, dataRow: { flexDirection: "row", gap: 5, flexWrap: "wrap" }, dataLabel: { ...type.caption }, dataValue: { ...type.caption, fontFamily: font.medium },
-  percentage: { ...type.title, fontSize: 24, alignSelf: "flex-end", marginBottom: 4 }, track: { height: 13, backgroundColor: "#CDCDCD", borderRadius: 8, overflow: "hidden" }, fill: { height: 13, backgroundColor: palette.navy, borderRadius: 8 },
+  goalCard: { flexShrink: 0, backgroundColor: palette.surface, borderWidth: 1, borderColor: "#DBDEE2", borderRadius: 9, padding: 14, gap: 12, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  compactCard: { padding: 12, gap: 10 }, compactContent: { paddingHorizontal: 14, gap: 12 },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: 10 }, icon: { width: 44, flexShrink: 0, alignItems: "center" }, compactIcon: { width: 36 }, pilot: { borderRadius: 24, backgroundColor: palette.navy, justifyContent: "center", alignItems: "center" },
+  details: { flex: 1, minWidth: 0, gap: 4 }, cardHeading: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 8, marginBottom: 6 }, cardTitle: { ...type.heading, fontSize: 17, flexGrow: 1, flexShrink: 1 }, dataLabel: { ...type.caption }, dataValue: { fontFamily: font.medium }, cardPercentage: { alignSelf: "flex-end", flexShrink: 0 },
+  percentage: { ...type.title, fontSize: 24 }, track: { height: 11, backgroundColor: "#CDCDCD", borderRadius: 8, overflow: "hidden" }, fill: { height: "100%", backgroundColor: palette.navy, borderRadius: 8 },
   reference: { ...type.caption, fontSize: 11, textAlign: "center" }, progressPage: { flex: 1, backgroundColor: palette.surface },
   progressHeader: { flexDirection: "row", alignItems: "center", padding: 10 }, progressTitle: { ...type.label, fontSize: 15, flex: 1, textAlign: "center" },
   progressContent: { padding: 16, paddingTop: 30, gap: 32, flexGrow: 1, alignItems: "center" }, ring: { width: 196, height: 196, justifyContent: "center", alignItems: "center", marginBottom: 15 },

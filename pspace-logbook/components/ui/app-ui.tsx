@@ -1,34 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { ReactNode, useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import FiveIconNav, { ActiveTab } from "@/components/layout/five-icon-nav";
 import Sidebar from "@/components/layout/sidebar";
 import { font, palette, surfaces, type } from "@/constants/ui";
 
-export function AppScreen({ title, subtitle, tab, children, scroll = true, onBack, brand = false, muted = false }: { title: string; subtitle?: string; tab?: ActiveTab; children: ReactNode; scroll?: boolean; onBack?: () => void; brand?: boolean; muted?: boolean }) {
+export function AppScreen({ title, subtitle, tab, children, scroll = true, onBack, brand = false, muted = false, scrollHeader = false, contentStyle }: { title: string; subtitle?: string; tab?: ActiveTab; children: ReactNode; scroll?: boolean; onBack?: () => void; brand?: boolean; muted?: boolean; scrollHeader?: boolean; contentStyle?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
+  const header = <View style={[styles.header, brand && styles.brandHeader]}>
+    <View style={styles.headerRow}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={tab ? "Open menu" : "Go back"} style={styles.headerButton} onPress={tab ? () => setMenuVisible(true) : onBack ?? (() => router.canGoBack() ? router.back() : router.replace("/dashboardscreen/dashboard"))}>
+        <Ionicons name={tab ? "menu-outline" : "arrow-back"} size={24} color={palette.navy} />
+      </TouchableOpacity>
+      {brand ? <Image accessibilityLabel="PSPACE Logbook" source={require("@/assets/images/logo-with-map.png")} resizeMode="contain" style={styles.logo} /> : <Text style={[type.title, styles.title]}>{title}</Text>}
+      <View style={styles.headerButton} />
+    </View>
+    {brand && <Text style={styles.brandTitle}>{title.toUpperCase()}</Text>}
+    {subtitle && <Text style={[type.caption, styles.subtitle]}>{subtitle}</Text>}
+  </View>;
+  const headerInScroll = scroll && scrollHeader;
   return (
     <View style={[styles.screen, muted && styles.muted]}>
       {!brand && <View pointerEvents="none" style={styles.mapBackdrop}><Image source={require("@/assets/images/country1.png")} resizeMode="contain" style={styles.mapAmericas} /><Image source={require("@/assets/images/country2.png")} resizeMode="contain" style={styles.mapWorld} /></View>}
       <SafeAreaView edges={["top", "left", "right"]} style={styles.flex}>
         <StatusBar style="dark" />
-        <View style={[styles.header, brand && styles.brandHeader]}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={tab ? "Open menu" : "Go back"} style={styles.headerButton} onPress={tab ? () => setMenuVisible(true) : onBack ?? (() => router.canGoBack() ? router.back() : router.replace("/dashboardscreen/dashboard"))}>
-              <Ionicons name={tab ? "menu-outline" : "arrow-back"} size={24} color={palette.navy} />
-            </TouchableOpacity>
-            {brand ? <Image accessibilityLabel="PSPACE Logbook" source={require("@/assets/images/logo-with-map.png")} resizeMode="contain" style={styles.logo} /> : <Text style={[type.title, styles.title]}>{title}</Text>}
-            <View style={styles.headerButton} />
-          </View>
-          {brand && <Text style={styles.brandTitle}>{title.toUpperCase()}</Text>}
-          {subtitle && <Text style={[type.caption, styles.subtitle]}>{subtitle}</Text>}
-        </View>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-          {scroll ? <ScrollView style={styles.flex} contentContainerStyle={[styles.content, muted && styles.muted]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>{children}</ScrollView> : <View style={styles.flex}>{children}</View>}
+        {!headerInScroll && header}
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.viewport}>
+          {scroll ? <ScrollView style={styles.viewport} contentContainerStyle={headerInScroll ? styles.scrollContent : [styles.content, muted && styles.muted, contentStyle]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {headerInScroll ? <>{header}<View style={[styles.content, muted && styles.muted, contentStyle]}>{children}</View></> : children}
+          </ScrollView> : <View style={styles.flex}>{children}</View>}
         </KeyboardAvoidingView>
         {tab && <FiveIconNav active={tab} />}
         <Sidebar visible={menuVisible} onClose={() => setMenuVisible(false)} />
@@ -74,6 +78,7 @@ export const appStyles = StyleSheet.create({ row: { flexDirection: "row", gap: 1
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: palette.surface }, muted: { backgroundColor: palette.background }, flex: { flex: 1 },
+  viewport: { flex: 1, minHeight: 0, overflow: "hidden" }, scrollContent: { flexGrow: 1 },
   mapBackdrop: { position: "absolute", left: 0, right: 0, top: 0, height: 190, overflow: "hidden" },
   mapAmericas: { position: "absolute", width: 155, height: 220, top: -90, left: -65, tintColor: palette.navy, opacity: 0.08 },
   mapWorld: { position: "absolute", width: 245, height: 170, top: -90, right: -100, tintColor: palette.navy, opacity: 0.045 },
